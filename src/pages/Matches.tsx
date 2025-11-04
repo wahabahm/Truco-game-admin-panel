@@ -4,33 +4,53 @@ import { apiService } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Trophy, Calendar, Filter, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Matches = () => {
   const [matches, setMatches] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [formData, setFormData] = useState({
     name: '',
     type: 'public',
     cost: '',
-    prize: ''
+    prize: '',
+    matchDate: ''
+  });
+  const [resultData, setResultData] = useState({
+    winnerId: '',
+    loserId: ''
   });
 
   useEffect(() => {
-    const fetchMatches = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
-      const data = await apiService.getMatches();
-      setMatches(data);
+      const [matchesData, usersData] = await Promise.all([
+        apiService.getMatches(),
+        apiService.getUsers()
+      ]);
+      setMatches(matchesData);
+      setUsers(usersData);
       setIsLoading(false);
     };
-    fetchMatches();
+    fetchData();
   }, []);
+
+  const filteredMatches = matches.filter(match => {
+    if (filter === 'active') return match.status === 'active';
+    if (filter === 'completed') return match.status === 'completed';
+    return true;
+  });
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +58,48 @@ const Matches = () => {
     if (result.success) {
       setMatches([result.match, ...matches]);
       toast.success('Match created successfully!');
-      setIsDialogOpen(false);
-      setFormData({ name: '', type: 'public', cost: '', prize: '' });
+      setIsCreateDialogOpen(false);
+      setFormData({ name: '', type: 'public', cost: '', prize: '', matchDate: '' });
     }
+  };
+
+  const handleRecordResult = (match: any) => {
+    setSelectedMatch(match);
+    setResultData({
+      winnerId: match.player1Id || '',
+      loserId: match.player2Id || ''
+    });
+    setIsResultDialogOpen(true);
+  };
+
+  const handleSubmitResult = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resultData.winnerId || !resultData.loserId) {
+      toast.error('Please select both winner and loser');
+      return;
+    }
+
+    const result = await apiService.recordMatchResult(
+      selectedMatch.id,
+      resultData.winnerId,
+      resultData.loserId
+    );
+
+    if (result.success) {
+      setMatches(matches.map(match =>
+        match.id === selectedMatch.id
+          ? { ...match, status: 'completed', winnerId: resultData.winnerId, completedAt: new Date().toISOString() }
+          : match
+      ));
+      toast.success('Match result recorded successfully!');
+      setIsResultDialogOpen(false);
+      setSelectedMatch(null);
+    }
+  };
+
+  const getUserName = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.name : `User ${userId}`;
   };
 
   return (
@@ -48,23 +107,24 @@ const Matches = () => {
       <div className="p-6 space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              1v1 Matches
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Create and manage game matches
+            <h1 className="text-3xl font-bold tracking-tight">1v1 Matches</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Create and manage game matches, record results
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="shadow-lg hover:shadow-xl transition-all duration-200">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Match
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Match</DialogTitle>
+                <DialogDescription>
+                  Create a new 1v1 match with entry cost and prize
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateMatch} className="space-y-4">
                 <div className="space-y-2">
@@ -73,6 +133,7 @@ const Matches = () => {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter match name"
                     required
                   />
                 </div>
@@ -92,12 +153,27 @@ const Matches = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="matchDate">
+                    <Calendar className="h-3.5 w-3.5 inline mr-1" />
+                    Match Date
+                  </Label>
+                  <Input
+                    id="matchDate"
+                    type="date"
+                    value={formData.matchDate}
+                    onChange={(e) => setFormData({ ...formData, matchDate: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="cost">Entry Cost (coins)</Label>
                   <Input
                     id="cost"
                     type="number"
+                    min="1"
                     value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                    placeholder="Enter entry cost"
                     required
                   />
                 </div>
@@ -106,47 +182,74 @@ const Matches = () => {
                   <Input
                     id="prize"
                     type="number"
+                    min="1"
                     value={formData.prize}
                     onChange={(e) => setFormData({ ...formData, prize: e.target.value })}
+                    placeholder="Enter prize amount"
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">Create Match</Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1">Create Match</Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="border rounded-lg">
+        <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'active' | 'completed')} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="all">All Matches</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="completed">Past Matches</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <div className="border rounded-xl shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Match Name</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead>Entry Cost</TableHead>
                 <TableHead>Prize</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Players</TableHead>
-                <TableHead>Created</TableHead>
+                {filter === 'completed' && <TableHead>Winner</TableHead>}
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={filter === 'completed' ? 9 : 8} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
-              ) : matches.length === 0 ? (
+              ) : filteredMatches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">No matches found</TableCell>
+                  <TableCell colSpan={filter === 'completed' ? 9 : 8} className="text-center py-8">No matches found</TableCell>
                 </TableRow>
               ) : (
-                matches.map((match) => (
-                  <TableRow key={match.id}>
+                filteredMatches.map((match) => (
+                  <TableRow key={match.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">{match.name}</TableCell>
                     <TableCell>
                       <Badge variant={match.type === 'public' ? 'default' : 'secondary'}>
                         {match.type}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {match.matchDate ? (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          {match.matchDate}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>{match.cost} coins</TableCell>
                     <TableCell>{match.prize} coins</TableCell>
@@ -155,14 +258,125 @@ const Matches = () => {
                         {match.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{match.players}/2</TableCell>
-                    <TableCell>{match.createdAt}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {match.player1Id && getUserName(match.player1Id)}
+                        {match.player2Id && ` vs ${getUserName(match.player2Id)}`}
+                        {!match.player1Id && !match.player2Id && 'No players'}
+                      </div>
+                    </TableCell>
+                    {filter === 'completed' && (
+                      <TableCell>
+                        {match.winnerId ? (
+                          <div className="flex items-center gap-1 text-success font-medium">
+                            <Trophy className="h-3.5 w-3.5" />
+                            {getUserName(match.winnerId)}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      {match.status === 'active' && match.players === 2 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRecordResult(match)}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                          Record Result
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          {match.status === 'active' ? 'Waiting for players' : 'Completed'}
+                        </span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Record Result Dialog */}
+        <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Record Match Result</DialogTitle>
+              <DialogDescription>
+                {selectedMatch && (
+                  <>Record the winner and loser for <strong>{selectedMatch.name}</strong></>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedMatch && (
+              <form onSubmit={handleSubmitResult} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="winnerId">Winner</Label>
+                  <Select
+                    value={resultData.winnerId}
+                    onValueChange={(value) => setResultData({ ...resultData, winnerId: value, loserId: resultData.loserId === value ? '' : resultData.loserId })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select winner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedMatch.player1Id && (
+                        <SelectItem value={selectedMatch.player1Id}>
+                          {getUserName(selectedMatch.player1Id)}
+                        </SelectItem>
+                      )}
+                      {selectedMatch.player2Id && (
+                        <SelectItem value={selectedMatch.player2Id}>
+                          {getUserName(selectedMatch.player2Id)}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="loserId">Loser</Label>
+                  <Select
+                    value={resultData.loserId}
+                    onValueChange={(value) => setResultData({ ...resultData, loserId: value, winnerId: resultData.winnerId === value ? '' : resultData.winnerId })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select loser" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedMatch.player1Id && (
+                        <SelectItem value={selectedMatch.player1Id}>
+                          {getUserName(selectedMatch.player1Id)}
+                        </SelectItem>
+                      )}
+                      {selectedMatch.player2Id && (
+                        <SelectItem value={selectedMatch.player2Id}>
+                          {getUserName(selectedMatch.player2Id)}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
+                  <div><strong>Prize:</strong> {selectedMatch.prize} coins</div>
+                  <div className="text-muted-foreground">
+                    Winner will receive {selectedMatch.prize} coins
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsResultDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1">
+                    Record Result
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

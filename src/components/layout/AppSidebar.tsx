@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const menuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -94,18 +95,19 @@ export const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
+      <SidebarFooter className="border-t border-sidebar-border p-4 space-y-2">
         {!isCollapsed && user && (
           <div className="mb-3 px-2 py-2 rounded-lg bg-sidebar-accent/30">
             <div className="text-xs font-medium text-sidebar-foreground">{user.name}</div>
             <div className="text-xs text-sidebar-foreground/60">{user.email}</div>
           </div>
         )}
+        <ThemeToggle variant={isCollapsed ? "icon" : "sidebar"} />
         <Button 
-          variant="outline" 
+          variant="ghost" 
           size={isCollapsed ? "icon" : "default"}
           onClick={handleLogout}
-          className="w-full border-sidebar-border hover:bg-sidebar-accent transition-all duration-200"
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
           {!isCollapsed && <span className="ml-2">Logout</span>}

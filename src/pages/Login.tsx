@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy } from 'lucide-react';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -36,6 +37,11 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Theme Toggle Button */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle variant="icon" />
+      </div>
+      
       {/* Animated background gradients */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20"></div>
       <div className="absolute top-0 -left-4 w-72 h-72 bg-primary/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-glow"></div>

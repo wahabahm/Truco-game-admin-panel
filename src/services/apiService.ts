@@ -10,6 +10,16 @@ export const apiService = {
     await new Promise(resolve => setTimeout(resolve, 500));
     return { success: true, user: { id, ...data } };
   },
+
+  updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove') => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, userId, amount, operation };
+  },
+
+  recordMatchResult: async (matchId: string, winnerId: string, loserId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, matchId, winnerId, loserId };
+  },
   
   // Matches
   getMatches: async () => {
@@ -19,7 +29,18 @@ export const apiService = {
   
   createMatch: async (data: any) => {
     await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, match: { id: Date.now().toString(), ...data } };
+    return { 
+      success: true, 
+      match: { 
+        id: Date.now().toString(), 
+        ...data,
+        status: 'active',
+        players: 0,
+        player1Id: null,
+        player2Id: null,
+        createdAt: new Date().toISOString().split('T')[0]
+      } 
+    };
   },
   
   // Tournaments
@@ -62,18 +83,20 @@ export const apiService = {
 
 // Mock data
 const mockUsers = [
-  { id: '1', name: 'João Silva', email: 'joao@example.com', coins: 1500, status: 'active', createdAt: '2024-01-15' },
-  { id: '2', name: 'Maria Santos', email: 'maria@example.com', coins: 2300, status: 'active', createdAt: '2024-01-20' },
-  { id: '3', name: 'Pedro Costa', email: 'pedro@example.com', coins: 890, status: 'suspended', createdAt: '2024-02-01' },
-  { id: '4', name: 'Ana Oliveira', email: 'ana@example.com', coins: 3200, status: 'active', createdAt: '2024-02-10' },
-  { id: '5', name: 'Carlos Lima', email: 'carlos@example.com', coins: 450, status: 'active', createdAt: '2024-02-15' },
+  { id: '1', name: 'João Silva', email: 'joao@example.com', coins: 1500, wins: 45, losses: 12, status: 'active', createdAt: '2024-01-15' },
+  { id: '2', name: 'Maria Santos', email: 'maria@example.com', coins: 2300, wins: 67, losses: 8, status: 'active', createdAt: '2024-01-20' },
+  { id: '3', name: 'Pedro Costa', email: 'pedro@example.com', coins: 890, wins: 23, losses: 34, status: 'suspended', createdAt: '2024-02-01' },
+  { id: '4', name: 'Ana Oliveira', email: 'ana@example.com', coins: 3200, wins: 89, losses: 15, status: 'active', createdAt: '2024-02-10' },
+  { id: '5', name: 'Carlos Lima', email: 'carlos@example.com', coins: 450, wins: 12, losses: 28, status: 'active', createdAt: '2024-02-15' },
 ];
 
 const mockMatches = [
-  { id: '1', name: 'Championship Match', type: 'public', cost: 100, prize: 180, status: 'active', createdAt: '2024-03-01', players: 2 },
-  { id: '2', name: 'Private Match 1', type: 'private', cost: 50, prize: 90, status: 'completed', createdAt: '2024-03-02', players: 2 },
-  { id: '3', name: 'Quick Match', type: 'public', cost: 20, prize: 36, status: 'active', createdAt: '2024-03-03', players: 2 },
-  { id: '4', name: 'Elite Match', type: 'public', cost: 500, prize: 900, status: 'active', createdAt: '2024-03-04', players: 2 },
+  { id: '1', name: 'Championship Match', type: 'public', cost: 100, prize: 180, status: 'active', matchDate: '2024-03-15', createdAt: '2024-03-01', players: 2, player1Id: '1', player2Id: '2' },
+  { id: '2', name: 'Private Match 1', type: 'private', cost: 50, prize: 90, status: 'completed', matchDate: '2024-03-10', createdAt: '2024-03-02', players: 2, player1Id: '3', player2Id: '4', winnerId: '4', completedAt: '2024-03-10 15:30' },
+  { id: '3', name: 'Quick Match', type: 'public', cost: 20, prize: 36, status: 'active', matchDate: '2024-03-16', createdAt: '2024-03-03', players: 1, player1Id: '5' },
+  { id: '4', name: 'Elite Match', type: 'public', cost: 500, prize: 900, status: 'active', matchDate: '2024-03-17', createdAt: '2024-03-04', players: 2, player1Id: '1', player2Id: '4' },
+  { id: '5', name: 'Past Match 1', type: 'public', cost: 75, prize: 135, status: 'completed', matchDate: '2024-03-08', createdAt: '2024-03-07', players: 2, player1Id: '2', player2Id: '3', winnerId: '2', completedAt: '2024-03-08 14:20' },
+  { id: '6', name: 'Past Match 2', type: 'private', cost: 150, prize: 270, status: 'completed', matchDate: '2024-03-05', createdAt: '2024-03-04', players: 2, player1Id: '1', player2Id: '4', winnerId: '1', completedAt: '2024-03-05 16:45' },
 ];
 
 const mockTournaments = [
