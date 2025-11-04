@@ -6,8 +6,7 @@ import {
   Receipt, 
   Activity, 
   FileText, 
-  LogOut,
-  Menu
+  LogOut
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -51,37 +50,41 @@ export const AppSidebar = () => {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <Trophy className="h-5 w-5 text-sidebar-primary-foreground" />
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sidebar-primary to-accent flex items-center justify-center shadow-lg">
+            <Trophy className="h-6 w-6 text-white" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground">Truco Admin</span>
+              <span className="font-bold text-sidebar-foreground text-lg">Truco Admin</span>
               <span className="text-xs text-sidebar-foreground/70">Game Management</span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold text-sidebar-foreground/60 mb-2">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
                       to={item.url}
                       className={({ isActive }) =>
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'hover:bg-sidebar-accent/50'
+                        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm'
+                            : 'hover:bg-sidebar-accent/50 text-sidebar-foreground/80 hover:text-sidebar-foreground'
+                        }`
                       }
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="h-4 w-4 flex-shrink-0" />
+                      {!isCollapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -93,15 +96,16 @@ export const AppSidebar = () => {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {!isCollapsed && user && (
-          <div className="mb-2 text-xs text-sidebar-foreground/70">
-            Logged in as: {user.name}
+          <div className="mb-3 px-2 py-2 rounded-lg bg-sidebar-accent/30">
+            <div className="text-xs font-medium text-sidebar-foreground">{user.name}</div>
+            <div className="text-xs text-sidebar-foreground/60">{user.email}</div>
           </div>
         )}
         <Button 
           variant="outline" 
           size={isCollapsed ? "icon" : "default"}
           onClick={handleLogout}
-          className="w-full"
+          className="w-full border-sidebar-border hover:bg-sidebar-accent transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
           {!isCollapsed && <span className="ml-2">Logout</span>}

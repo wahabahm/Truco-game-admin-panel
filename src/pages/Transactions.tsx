@@ -34,10 +34,12 @@ const Transactions = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transactions & Economy</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            Transactions & Economy
+          </h1>
+          <p className="text-muted-foreground mt-1">
             Monitor all coin transactions and economy activity
           </p>
         </div>

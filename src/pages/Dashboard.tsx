@@ -25,12 +25,19 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of your Truco game platform
-          </p>
+      <div className="p-6 space-y-6 animate-fade-in">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Overview of your Truco game platform
+            </p>
+          </div>
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <Activity className="h-6 w-6 text-primary animate-pulse-glow" />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

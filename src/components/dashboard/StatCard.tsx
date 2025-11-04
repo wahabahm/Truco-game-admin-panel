@@ -14,21 +14,25 @@ interface StatCardProps {
 
 export const StatCard = ({ title, value, icon: Icon, description, trend }: StatCardProps) => {
   return (
-    <Card>
+    <Card className="hover-lift overflow-hidden relative group">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{value}</div>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <p className="text-xs text-muted-foreground mt-2">{description}</p>
         )}
         {trend && (
-          <div className={`text-xs mt-1 ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
-            {trend.isPositive ? '↑' : '↓'} {trend.value}
+          <div className={`text-xs mt-2 font-medium flex items-center gap-1 ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
+            <span className="text-base">{trend.isPositive ? '↑' : '↓'}</span>
+            {trend.value}
           </div>
         )}
       </CardContent>

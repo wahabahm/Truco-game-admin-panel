@@ -45,17 +45,19 @@ const Tournaments = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Tournaments
+            </h1>
+            <p className="text-muted-foreground mt-1">
               Create and manage tournaments
             </p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="shadow-lg hover:shadow-xl transition-all duration-200">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Tournament
               </Button>

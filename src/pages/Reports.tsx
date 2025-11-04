@@ -27,23 +27,25 @@ const Reports = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports & Exports</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            Reports & Exports
+          </h1>
+          <p className="text-muted-foreground mt-1">
             Generate and download comprehensive reports
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="hover-lift">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Users Report</CardTitle>
             </CardHeader>
             <CardContent>
               <Button 
                 variant="outline" 
-                className="w-full"
+                className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-200"
                 onClick={() => handleExport('Users')}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -52,14 +54,14 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Matches Report</CardTitle>
             </CardHeader>
             <CardContent>
               <Button 
                 variant="outline" 
-                className="w-full"
+                className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-200"
                 onClick={() => handleExport('Matches')}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -68,14 +70,14 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Tournaments Report</CardTitle>
             </CardHeader>
             <CardContent>
               <Button 
                 variant="outline" 
-                className="w-full"
+                className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-200"
                 onClick={() => handleExport('Tournaments')}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -84,14 +86,14 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Transactions Report</CardTitle>
             </CardHeader>
             <CardContent>
               <Button 
                 variant="outline" 
-                className="w-full"
+                className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-200"
                 onClick={() => handleExport('Transactions')}
               >
                 <Download className="h-4 w-4 mr-2" />

@@ -23,19 +23,22 @@ const Live = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Live Monitor</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            Live Monitor
+          </h1>
+          <p className="text-muted-foreground mt-1">
             Real-time monitoring and controls
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="hover-lift border-primary/20">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 Active Players
+                <div className="h-2 w-2 rounded-full bg-success animate-pulse-glow"></div>
               </CardTitle>
             </CardHeader>
             <CardContent>

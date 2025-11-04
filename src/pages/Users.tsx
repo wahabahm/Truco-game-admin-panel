@@ -41,11 +41,13 @@ const Users = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Users Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
               Manage registered players and their accounts
             </p>
           </div>
@@ -53,17 +55,17 @@ const Users = () => {
 
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
+              className="pl-9 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
 
-        <div className="border rounded-lg">
+        <div className="border rounded-xl shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
