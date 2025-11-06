@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trophy, Calendar, Filter, CheckCircle2 } from 'lucide-react';
+import { Plus, Trophy, Calendar, Filter, CheckCircle2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Matches = () => {
@@ -20,6 +20,7 @@ const Matches = () => {
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [isAutoJoining, setIsAutoJoining] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'public',
@@ -46,6 +47,12 @@ const Matches = () => {
     fetchData();
   }, []);
 
+  // Refresh matches list
+  const refreshMatches = async () => {
+    const matchesData = await apiService.getMatches();
+    setMatches(matchesData);
+  };
+
   const filteredMatches = matches.filter(match => {
     if (filter === 'active') return match.status === 'active';
     if (filter === 'completed') return match.status === 'completed';
@@ -54,12 +61,16 @@ const Matches = () => {
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await apiService.createMatch(formData);
-    if (result.success) {
-      setMatches([result.match, ...matches]);
-      toast.success('Match created successfully!');
-      setIsCreateDialogOpen(false);
-      setFormData({ name: '', type: 'public', cost: '', prize: '', matchDate: '' });
+    try {
+      const result = await apiService.createMatch(formData);
+      if (result.success) {
+        toast.success('Match created successfully!');
+        setIsCreateDialogOpen(false);
+        setFormData({ name: '', type: 'public', cost: '', prize: '', matchDate: '' });
+        await refreshMatches(); // Refresh to show new match
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create match');
     }
   };
 
@@ -79,21 +90,25 @@ const Matches = () => {
       return;
     }
 
-    const result = await apiService.recordMatchResult(
-      selectedMatch.id,
-      resultData.winnerId,
-      resultData.loserId
-    );
+    try {
+      const result = await apiService.recordMatchResult(
+        selectedMatch.id,
+        resultData.winnerId,
+        resultData.loserId
+      );
 
-    if (result.success) {
-      setMatches(matches.map(match =>
-        match.id === selectedMatch.id
-          ? { ...match, status: 'completed', winnerId: resultData.winnerId, completedAt: new Date().toISOString() }
-          : match
-      ));
-      toast.success('Match result recorded successfully!');
-      setIsResultDialogOpen(false);
-      setSelectedMatch(null);
+      if (result.success) {
+        setMatches(matches.map(match =>
+          match.id === selectedMatch.id
+            ? { ...match, status: 'completed', winnerId: resultData.winnerId, completedAt: new Date().toISOString() }
+            : match
+        ));
+        toast.success('Match result recorded successfully!');
+        setIsResultDialogOpen(false);
+        setSelectedMatch(null);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to record match result');
     }
   };
 
@@ -101,6 +116,31 @@ const Matches = () => {
     const user = users.find(u => u.id === userId);
     return user ? user.name : `User ${userId}`;
   };
+
+  /**
+   * Auto-matchmaking: Automatically find and join an available match
+   */
+  const handleAutoJoin = async () => {
+    setIsAutoJoining(true);
+    try {
+      const result = await apiService.autoJoinMatch();
+      if (result.success) {
+        toast.success(result.message || 'Successfully joined match!');
+        await refreshMatches(); // Refresh to show updated match
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to join match automatically');
+    } finally {
+      setIsAutoJoining(false);
+    }
+  };
+
+  // Get available matches (active, public, not full)
+  const availableMatches = matches.filter(match => 
+    match.status === 'active' && 
+    match.type === 'public' && 
+    match.players < 2
+  );
 
   return (
     <AppLayout>
@@ -112,13 +152,23 @@ const Matches = () => {
               Create and manage game matches, record results
             </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="shadow-lg hover:shadow-xl transition-all duration-200">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Match
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleAutoJoin}
+              disabled={isAutoJoining || availableMatches.length === 0}
+              className="shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-primary to-primary/80"
+              title={availableMatches.length === 0 ? 'No available matches' : 'Quick join an available match'}
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              {isAutoJoining ? 'Joining...' : 'Quick Join'}
+            </Button>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Match
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Match</DialogTitle>
@@ -198,6 +248,7 @@ const Matches = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'active' | 'completed')} className="w-full">
@@ -207,6 +258,33 @@ const Matches = () => {
             <TabsTrigger value="completed">Past Matches</TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Available Matches Info Card */}
+        {availableMatches.length > 0 && (
+          <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Zap className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-foreground">
+                  {availableMatches.length} {availableMatches.length === 1 ? 'Match' : 'Matches'} Available
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Click "Quick Join" to automatically join an available match
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleAutoJoin}
+              disabled={isAutoJoining}
+              className="bg-gradient-to-r from-primary to-primary/80"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              {isAutoJoining ? 'Joining...' : 'Quick Join Now'}
+            </Button>
+          </div>
+        )}
 
         <div className="border rounded-xl shadow-sm overflow-hidden">
           <Table>

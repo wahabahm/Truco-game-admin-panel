@@ -1,26 +1,8 @@
-import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Activity, AlertTriangle, XCircle, DollarSign } from 'lucide-react';
-import { toast } from 'sonner';
+import { Activity, Zap, TrendingUp, AlertTriangle } from 'lucide-react';
 
 const Live = () => {
-  const [alerts] = useState([
-    { id: '1', type: 'fraud', message: 'Suspicious activity detected for user #42', severity: 'high', timestamp: '2 min ago' },
-    { id: '2', type: 'reconnection', message: 'Multiple reconnection attempts from user #156', severity: 'medium', timestamp: '5 min ago' },
-    { id: '3', type: 'fraud', message: 'Unusual betting pattern in tournament #3', severity: 'high', timestamp: '10 min ago' },
-  ]);
-
-  const handleForceClose = (type: string, id: string) => {
-    toast.success(`${type} #${id} has been force-closed`);
-  };
-
-  const handleAdjustPrize = () => {
-    toast.success('Prize adjusted successfully');
-  };
-
   return (
     <AppLayout>
       <div className="p-6 space-y-6 animate-fade-in">
@@ -77,73 +59,45 @@ const Live = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Alerts
+                System Status
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-warning">3</div>
-              <div className="flex items-center text-xs text-warning mt-1">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Needs attention
-              </div>
+              <div className="text-2xl font-bold text-success">Operational</div>
+              <div className="text-xs text-success mt-1">All systems normal</div>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Suspicious Activity Alerts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {alerts.map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className={`h-5 w-5 ${alert.severity === 'high' ? 'text-destructive' : 'text-warning'}`} />
-                    <div>
-                      <p className="font-medium">{alert.message}</p>
-                      <p className="text-sm text-muted-foreground">{alert.timestamp}</p>
-                    </div>
-                  </div>
-                  <Badge variant={alert.severity === 'high' ? 'destructive' : 'secondary'}>
-                    {alert.severity}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Manual Controls</CardTitle>
+              <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => handleForceClose('Match', '42')}
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Force Close Match
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => handleForceClose('Tournament', '3')}
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Force Close Tournament
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={handleAdjustPrize}
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Adjust Prize Distribution
-              </Button>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-success"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Match Started</div>
+                    <div className="text-xs text-muted-foreground">2 minutes ago</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-primary"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Tournament Registration</div>
+                    <div className="text-xs text-muted-foreground">5 minutes ago</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-accent"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">New User Registered</div>
+                    <div className="text-xs text-muted-foreground">10 minutes ago</div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -175,3 +129,4 @@ const Live = () => {
 };
 
 export default Live;
+

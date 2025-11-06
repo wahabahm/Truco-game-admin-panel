@@ -1,121 +1,403 @@
-// Mock API service - will connect to real backend later
+// API Base URL - Change this to your backend URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+// Helper function to get auth token
+const getToken = () => {
+  return localStorage.getItem('token');
+};
+
+// Helper function for API requests
+const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const token = getToken();
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'API request failed');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
+
 export const apiService = {
   // Users
-  getUsers: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockUsers;
+  getUsers: async (search?: string) => {
+    const params = search ? `?search=${encodeURIComponent(search)}` : '';
+    const response = await apiRequest(`/users${params}`);
+    return response.users || [];
   },
   
   updateUser: async (id: string, data: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, user: { id, ...data } };
+    const response = await apiRequest(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return response;
   },
 
   updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove') => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, userId, amount, operation };
+    const response = await apiRequest(`/users/${userId}/coins`, {
+      method: 'PATCH',
+      body: JSON.stringify({ amount, operation }),
+    });
+    return response;
   },
 
-  recordMatchResult: async (matchId: string, winnerId: string, loserId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, matchId, winnerId, loserId };
+  updateUserStatus: async (userId: string, status: 'active' | 'suspended') => {
+    const response = await apiRequest(`/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return response;
   },
   
   // Matches
-  getMatches: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockMatches;
+  getMatches: async (status?: string) => {
+    const params = status ? `?status=${status}` : '';
+    const response = await apiRequest(`/matches${params}`);
+    return response.matches || [];
   },
   
   createMatch: async (data: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { 
-      success: true, 
-      match: { 
-        id: Date.now().toString(), 
-        ...data,
-        status: 'active',
-        players: 0,
-        player1Id: null,
-        player2Id: null,
-        createdAt: new Date().toISOString().split('T')[0]
-      } 
-    };
+    const response = await apiRequest('/matches', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: data.name,
+        type: data.type,
+        cost: parseInt(data.cost),
+        prize: parseInt(data.prize),
+        matchDate: data.matchDate || null,
+      }),
+    });
+    return response;
+  },
+
+  joinMatch: async (matchId: string, userId: string) => {
+    const response = await apiRequest(`/matches/${matchId}/join`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+    return response;
+  },
+
+  autoJoinMatch: async () => {
+    const response = await apiRequest('/matches/auto-join', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  recordMatchResult: async (matchId: string, winnerId: string, loserId: string) => {
+    const response = await apiRequest(`/matches/${matchId}/result`, {
+      method: 'POST',
+      body: JSON.stringify({ winnerId, loserId }),
+    });
+    return response;
   },
   
   // Tournaments
-  getTournaments: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockTournaments;
+  getTournaments: async (status?: string) => {
+    const params = status ? `?status=${status}` : '';
+    const response = await apiRequest(`/tournaments${params}`);
+    return response.tournaments || [];
+  },
+
+  getTournament: async (id: string) => {
+    const response = await apiRequest(`/tournaments/${id}`);
+    return response.tournament;
   },
   
   createTournament: async (data: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, tournament: { id: Date.now().toString(), ...data } };
+    const response = await apiRequest('/tournaments', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: data.name,
+        type: data.type,
+        maxPlayers: parseInt(data.maxPlayers),
+        entryCost: parseInt(data.entryCost),
+        prizePool: parseInt(data.prizePool),
+        startDate: data.startDate || null,
+      }),
+    });
+    return response;
+  },
+
+  joinTournament: async (tournamentId: string) => {
+    const response = await apiRequest(`/tournaments/${tournamentId}/join`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  recordTournamentMatch: async (tournamentId: string, roundNumber: number, matchIndex: number, winnerId: string) => {
+    const response = await apiRequest(`/tournaments/${tournamentId}/record-match`, {
+      method: 'POST',
+      body: JSON.stringify({
+        roundNumber,
+        matchIndex,
+        winnerId,
+      }),
+    });
+    return response;
+  },
+
+  cancelTournament: async (tournamentId: string, reason?: string) => {
+    const response = await apiRequest(`/tournaments/${tournamentId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: reason || '' }),
+    });
+    return response;
   },
   
   // Transactions
-  getTransactions: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockTransactions;
+  getTransactions: async (userId?: string) => {
+    const params = userId ? `?userId=${userId}` : '';
+    const response = await apiRequest(`/transactions${params}`);
+    return response.transactions || [];
   },
   
   // Dashboard stats
   getDashboardStats: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      totalUsers: 1523,
-      totalCoins: 45230,
-      activePlayers: 142,
-      ongoingMatches: 23,
-      ongoingTournaments: 5,
-      completedMatches: 3421,
-      completedTournaments: 89
+    const response = await apiRequest('/dashboard/stats');
+    return response.stats || {
+      totalUsers: 0,
+      totalCoins: 0,
+      activePlayers: 0,
+      ongoingMatches: 0,
+      ongoingTournaments: 0,
+      completedMatches: 0,
+      completedTournaments: 0
     };
   },
   
-  // Admin logs
+  // Economy stats
+  getEconomyStats: async () => {
+    const response = await apiRequest('/dashboard/economy');
+    return response.economy || {
+      totalCoinsInCirculation: 0,
+      totalCoinsIssued: 0,
+      coinsUsedInTournaments: 0,
+      coinsUsedInMatches: 0,
+      prizesDistributed: 0,
+      totalCoinsUsed: 0
+    };
+  },
+  
+  // Dashboard charts
+  getUserGrowthData: async () => {
+    const response = await apiRequest('/dashboard/user-growth');
+    return response.data || [];
+  },
+
+  getWeeklyActivityData: async () => {
+    const response = await apiRequest('/dashboard/weekly-activity');
+    return response.data || [];
+  },
+
+  getRecentActivity: async (limit?: number) => {
+    const params = limit ? `?limit=${limit}` : '';
+    const response = await apiRequest(`/dashboard/recent-activity${params}`);
+    return response.activities || [];
+  },
+
+  // Auth endpoints
+  logout: async () => {
+    const response = await apiRequest('/auth/logout', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  checkAdmin: async () => {
+    const response = await apiRequest('/auth/check-admin');
+    return response;
+  },
+
+  // Match endpoints
+  getMatch: async (id: string) => {
+    const response = await apiRequest(`/matches/${id}`);
+    return response.match;
+  },
+
+  // User endpoints
+  getUserStats: async (userId: string) => {
+    const response = await apiRequest(`/users/${userId}/stats`);
+    return response.stats;
+  },
+
+  // Tournament endpoints
+  getTournamentPlayers: async (tournamentId: string) => {
+    const response = await apiRequest(`/tournaments/${tournamentId}/players`);
+    return response;
+  },
+
+  updateTournamentAwardPercentage: async (tournamentId: string, percentage: number) => {
+    const response = await apiRequest(`/tournaments/${tournamentId}/update-award-percentage`, {
+      method: 'POST',
+      body: JSON.stringify({ percentage }),
+    });
+    return response;
+  },
+
+  // System status
+  getSystemStatus: async () => {
+    const response = await apiRequest('/dashboard/system/status');
+    return response.status;
+  },
+
+  // Alerts endpoints
+  createAlert: async (data: any) => {
+    const response = await apiRequest('/alerts/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        severity: data.severity || 'medium',
+        relatedMatchId: data.relatedMatchId || null,
+        relatedTournamentId: data.relatedTournamentId || null,
+        relatedUserId: data.relatedUserId || null,
+        metadata: data.metadata || {}
+      }),
+    });
+    return response;
+  },
+
+  getAlerts: async (status?: string, type?: string, severity?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (type) params.append('type', type);
+    if (severity) params.append('severity', severity);
+    const queryString = params.toString();
+    const response = await apiRequest(`/alerts${queryString ? `?${queryString}` : ''}`);
+    return response.alerts || [];
+  },
+
+  getAlert: async (id: string) => {
+    const response = await apiRequest(`/alerts/${id}`);
+    return response.alert;
+  },
+
+  acknowledgeAlert: async (id: string) => {
+    const response = await apiRequest(`/alerts/${id}`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  resolveAlert: async (id: string) => {
+    const response = await apiRequest(`/alerts/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  dismissAlert: async (id: string) => {
+    const response = await apiRequest(`/alerts/${id}/dismiss`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  getAlertsSummary: async () => {
+    const response = await apiRequest('/alerts/stats/summary');
+    return response.summary || {};
+  },
+
+  bulkAcknowledgeAlerts: async (alertIds: string[]) => {
+    const response = await apiRequest('/alerts/bulk/acknowledge', {
+      method: 'POST',
+      body: JSON.stringify({ alertIds }),
+    });
+    return response;
+  },
+
+  // Admin alerts endpoints
+  getAdminAlertsDashboard: async () => {
+    const response = await apiRequest('/admin/alerts/dashboard');
+    return response.dashboard || {};
+  },
+
+  getAdminAlerts: async (status?: string, type?: string, severity?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (type) params.append('type', type);
+    if (severity) params.append('severity', severity);
+    const queryString = params.toString();
+    const response = await apiRequest(`/admin/alerts${queryString ? `?${queryString}` : ''}`);
+    return response.alerts || [];
+  },
+
+  getAdminAlert: async (id: string) => {
+    const response = await apiRequest(`/admin/alerts/${id}`);
+    return response.alert;
+  },
+
+  adminAcknowledgeAlert: async (id: string) => {
+    const response = await apiRequest(`/admin/alerts/${id}/acknowledge`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  adminResolveAlert: async (id: string) => {
+    const response = await apiRequest(`/admin/alerts/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  adminDismissAlert: async (id: string) => {
+    const response = await apiRequest(`/admin/alerts/${id}/dismiss`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return response;
+  },
+
+  adminBulkAcknowledgeAlerts: async (alertIds: string[]) => {
+    const response = await apiRequest('/admin/alerts/bulk/acknowledge', {
+      method: 'POST',
+      body: JSON.stringify({ alertIds }),
+    });
+    return response;
+  },
+
+  getAdminAlertsSummary: async () => {
+    const response = await apiRequest('/admin/alerts/stats/summary');
+    return response.summary || {};
+  },
+  
+  // Admin logs (for future)
   getAdminLogs: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockAdminLogs;
+    // TODO: Implement when admin logs API is ready
+    return [];
   }
 };
-
-// Mock data
-const mockUsers = [
-  { id: '1', name: 'João Silva', email: 'joao@example.com', coins: 1500, wins: 45, losses: 12, status: 'active', createdAt: '2024-01-15' },
-  { id: '2', name: 'Maria Santos', email: 'maria@example.com', coins: 2300, wins: 67, losses: 8, status: 'active', createdAt: '2024-01-20' },
-  { id: '3', name: 'Pedro Costa', email: 'pedro@example.com', coins: 890, wins: 23, losses: 34, status: 'suspended', createdAt: '2024-02-01' },
-  { id: '4', name: 'Ana Oliveira', email: 'ana@example.com', coins: 3200, wins: 89, losses: 15, status: 'active', createdAt: '2024-02-10' },
-  { id: '5', name: 'Carlos Lima', email: 'carlos@example.com', coins: 450, wins: 12, losses: 28, status: 'active', createdAt: '2024-02-15' },
-];
-
-const mockMatches = [
-  { id: '1', name: 'Championship Match', type: 'public', cost: 100, prize: 180, status: 'active', matchDate: '2024-03-15', createdAt: '2024-03-01', players: 2, player1Id: '1', player2Id: '2' },
-  { id: '2', name: 'Private Match 1', type: 'private', cost: 50, prize: 90, status: 'completed', matchDate: '2024-03-10', createdAt: '2024-03-02', players: 2, player1Id: '3', player2Id: '4', winnerId: '4', completedAt: '2024-03-10 15:30' },
-  { id: '3', name: 'Quick Match', type: 'public', cost: 20, prize: 36, status: 'active', matchDate: '2024-03-16', createdAt: '2024-03-03', players: 1, player1Id: '5' },
-  { id: '4', name: 'Elite Match', type: 'public', cost: 500, prize: 900, status: 'active', matchDate: '2024-03-17', createdAt: '2024-03-04', players: 2, player1Id: '1', player2Id: '4' },
-  { id: '5', name: 'Past Match 1', type: 'public', cost: 75, prize: 135, status: 'completed', matchDate: '2024-03-08', createdAt: '2024-03-07', players: 2, player1Id: '2', player2Id: '3', winnerId: '2', completedAt: '2024-03-08 14:20' },
-  { id: '6', name: 'Past Match 2', type: 'private', cost: 150, prize: 270, status: 'completed', matchDate: '2024-03-05', createdAt: '2024-03-04', players: 2, player1Id: '1', player2Id: '4', winnerId: '1', completedAt: '2024-03-05 16:45' },
-];
-
-const mockTournaments = [
-  { id: '1', name: 'Spring Championship', type: 'public', entryCost: 500, prizePool: 10000, status: 'ongoing', participants: 32, startDate: '2024-03-10' },
-  { id: '2', name: 'Weekend Cup', type: 'public', entryCost: 100, prizePool: 1500, status: 'completed', participants: 16, startDate: '2024-03-05' },
-  { id: '3', name: 'Private Tournament', type: 'private', entryCost: 200, prizePool: 3000, status: 'ongoing', participants: 16, startDate: '2024-03-08' },
-];
-
-const mockTransactions = [
-  { id: '1', userId: '1', type: 'match_entry', amount: -100, description: 'Championship Match entry', timestamp: '2024-03-10 14:30' },
-  { id: '2', userId: '2', type: 'match_win', amount: 180, description: 'Championship Match prize', timestamp: '2024-03-10 15:00' },
-  { id: '3', userId: '3', type: 'tournament_entry', amount: -500, description: 'Spring Championship entry', timestamp: '2024-03-10 10:00' },
-  { id: '4', userId: '4', type: 'coin_purchase', amount: 1000, description: 'Coin package purchase', timestamp: '2024-03-09 18:20' },
-  { id: '5', userId: '5', type: 'match_entry', amount: -50, description: 'Quick Match entry', timestamp: '2024-03-10 16:45' },
-];
-
-const mockAdminLogs = [
-  { id: '1', admin: 'Admin User', action: 'Created tournament "Spring Championship"', timestamp: '2024-03-10 09:00' },
-  { id: '2', admin: 'Admin User', action: 'Suspended user Pedro Costa', timestamp: '2024-03-09 14:30' },
-  { id: '3', admin: 'Admin User', action: 'Force-closed match "Elite Match"', timestamp: '2024-03-08 16:00' },
-  { id: '4', admin: 'Admin User', action: 'Adjusted prize for tournament "Weekend Cup"', timestamp: '2024-03-07 11:20' },
-];

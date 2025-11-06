@@ -6,6 +6,7 @@ import {
   Receipt, 
   Activity, 
   FileText, 
+  Bell,
   LogOut
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -33,6 +34,7 @@ const menuItems = [
   { title: 'Matches', url: '/matches', icon: Swords },
   { title: 'Tournaments', url: '/tournaments', icon: Trophy },
   { title: 'Transactions', url: '/transactions', icon: Receipt },
+  { title: 'Alerts', url: '/alerts', icon: Bell },
   { title: 'Live Monitor', url: '/live', icon: Activity },
   { title: 'Reports', url: '/reports', icon: FileText },
 ];

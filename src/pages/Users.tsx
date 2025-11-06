@@ -37,13 +37,17 @@ const Users = () => {
 
   const toggleUserStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
-    await apiService.updateUser(userId, { status: newStatus });
-    
-    setUsers(users.map(user =>
-      user.id === userId ? { ...user, status: newStatus } : user
-    ));
-    
-    toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully`);
+    try {
+      await apiService.updateUserStatus(userId, newStatus);
+      
+      setUsers(users.map(user =>
+        user.id === userId ? { ...user, status: newStatus } : user
+      ));
+      
+      toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update user status');
+    }
   };
 
   const handleCoinManagement = (user: any) => {
@@ -60,26 +64,30 @@ const Users = () => {
       return;
     }
 
-    const amount = parseFloat(coinAmount);
-    const result = await apiService.updateUserCoins(selectedUser.id, amount, coinOperation);
-    
-    if (result.success) {
-      // Update user coins in local state
-      setUsers(users.map(user =>
-        user.id === selectedUser.id 
-          ? { 
-              ...user, 
-              coins: coinOperation === 'add' 
-                ? user.coins + amount 
-                : Math.max(0, user.coins - amount)
-            } 
-          : user
-      ));
+    try {
+      const amount = parseFloat(coinAmount);
+      const result = await apiService.updateUserCoins(selectedUser.id, amount, coinOperation);
       
-      toast.success(`Coins ${coinOperation === 'add' ? 'added' : 'removed'} successfully`);
-      setCoinDialogOpen(false);
-      setCoinAmount('');
-      setSelectedUser(null);
+      if (result.success) {
+        // Update user coins in local state
+        setUsers(users.map(user =>
+          user.id === selectedUser.id 
+            ? { 
+                ...user, 
+                coins: result.user?.coins || (coinOperation === 'add' 
+                  ? user.coins + amount 
+                  : Math.max(0, user.coins - amount))
+              } 
+            : user
+        ));
+        
+        toast.success(`Coins ${coinOperation === 'add' ? 'added' : 'removed'} successfully`);
+        setCoinDialogOpen(false);
+        setCoinAmount('');
+        setSelectedUser(null);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update coins');
     }
   };
 

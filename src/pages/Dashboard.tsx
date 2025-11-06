@@ -27,48 +27,67 @@ const Dashboard = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [userGrowthData, setUserGrowthData] = useState<any[]>([]);
+  const [weeklyActivityData, setWeeklyActivityData] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAllData = async () => {
       try {
-        const data = await apiService.getDashboardStats();
-        setStats(data);
+        // Fetch all dashboard data in parallel
+        const [statsData, growthData, activityData, activityFeed] = await Promise.all([
+          apiService.getDashboardStats(),
+          apiService.getUserGrowthData(),
+          apiService.getWeeklyActivityData(),
+          apiService.getRecentActivity(5)
+        ]);
+
+        setStats(statsData);
+        setUserGrowthData(growthData.length > 0 ? growthData : [
+          { month: 'Jan', users: 0, matches: 0 },
+          { month: 'Feb', users: 0, matches: 0 },
+          { month: 'Mar', users: 0, matches: 0 },
+          { month: 'Apr', users: 0, matches: 0 },
+          { month: 'May', users: 0, matches: 0 },
+          { month: 'Jun', users: 0, matches: 0 },
+        ]);
+        setWeeklyActivityData(activityData.length > 0 ? activityData : [
+          { day: 'Mon', active: 0, matches: 0 },
+          { day: 'Tue', active: 0, matches: 0 },
+          { day: 'Wed', active: 0, matches: 0 },
+          { day: 'Thu', active: 0, matches: 0 },
+          { day: 'Fri', active: 0, matches: 0 },
+          { day: 'Sat', active: 0, matches: 0 },
+          { day: 'Sun', active: 0, matches: 0 },
+        ]);
+        setRecentActivity(activityFeed);
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        console.error('Failed to fetch dashboard data:', error);
+        // Set default empty data on error
+        setUserGrowthData([
+          { month: 'Jan', users: 0, matches: 0 },
+          { month: 'Feb', users: 0, matches: 0 },
+          { month: 'Mar', users: 0, matches: 0 },
+          { month: 'Apr', users: 0, matches: 0 },
+          { month: 'May', users: 0, matches: 0 },
+          { month: 'Jun', users: 0, matches: 0 },
+        ]);
+        setWeeklyActivityData([
+          { day: 'Mon', active: 0, matches: 0 },
+          { day: 'Tue', active: 0, matches: 0 },
+          { day: 'Wed', active: 0, matches: 0 },
+          { day: 'Thu', active: 0, matches: 0 },
+          { day: 'Fri', active: 0, matches: 0 },
+          { day: 'Sat', active: 0, matches: 0 },
+          { day: 'Sun', active: 0, matches: 0 },
+        ]);
+        setRecentActivity([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
+    fetchAllData();
   }, []);
-
-  // Generate sample data for charts
-  const userGrowthData = [
-    { month: 'Jan', users: 1200, matches: 850 },
-    { month: 'Feb', users: 1900, matches: 1200 },
-    { month: 'Mar', users: 2800, matches: 1800 },
-    { month: 'Apr', users: 3200, matches: 2100 },
-    { month: 'May', users: 3800, matches: 2500 },
-    { month: 'Jun', users: 4500, matches: 2900 },
-  ];
-
-  const weeklyActivityData = [
-    { day: 'Mon', active: 320, matches: 45 },
-    { day: 'Tue', active: 380, matches: 52 },
-    { day: 'Wed', active: 410, matches: 58 },
-    { day: 'Thu', active: 390, matches: 55 },
-    { day: 'Fri', active: 450, matches: 68 },
-    { day: 'Sat', active: 520, matches: 78 },
-    { day: 'Sun', active: 480, matches: 72 },
-  ];
-
-  const recentActivity = [
-    { id: 1, type: 'match', action: 'New match started', user: 'Player123', time: '2 min ago', status: 'active' },
-    { id: 2, type: 'tournament', action: 'Tournament completed', user: 'Tournament #42', time: '15 min ago', status: 'completed' },
-    { id: 3, type: 'user', action: 'New user registered', user: 'NewPlayer', time: '28 min ago', status: 'new' },
-    { id: 4, type: 'transaction', action: 'Coins purchased', user: 'Player456', time: '1 hour ago', status: 'transaction' },
-    { id: 5, type: 'match', action: 'Match completed', user: 'Player789', time: '2 hours ago', status: 'completed' },
-  ];
 
   const chartConfig = {
     users: {
