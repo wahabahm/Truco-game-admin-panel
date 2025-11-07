@@ -9,10 +9,12 @@ interface AppLayoutProps {
 export const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
         <AppSidebar />
         <main className="flex-1 overflow-auto">
-          {children}
+          <div className="min-h-screen">
+            {children}
+          </div>
         </main>
       </div>
     </SidebarProvider>
