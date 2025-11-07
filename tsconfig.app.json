@@ -15,11 +15,12 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "noFallthroughCasesInSwitch": false,
+    "strict": false, // Keeping false for gradual migration, but types are now properly defined
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": true, // Now enabled with proper types
+    "noFallthroughCasesInSwitch": true,
+    "strictNullChecks": true, // Enabled for better null safety
 
     "baseUrl": ".",
     "paths": {
