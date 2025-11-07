@@ -27,3 +27,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Accidental files with special characters
+(info, error, warn, debug)
