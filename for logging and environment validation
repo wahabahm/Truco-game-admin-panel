@@ -1,0 +1,60 @@
+warning: in the working copy of 'backend/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/config/database.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/models/User.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/auth.routes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/dashboard.routes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/match.routes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/transaction.routes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/user.routes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/server.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/context/AuthContext.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Alerts.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Dashboard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Live.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Matches.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Reports.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Tournaments.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Transactions.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Users.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/apiService.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/authService.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tsconfig.app.json', LF will be replaced by CRLF the next time Git touches it
+M	backend/package-lock.json
+M	backend/package.json
+M	backend/src/config/database.js
+M	backend/src/models/Match.js
+M	backend/src/models/Transaction.js
+M	backend/src/models/User.js
+M	backend/src/routes/admin.routes.js
+M	backend/src/routes/alert.routes.js
+M	backend/src/routes/auth.routes.js
+M	backend/src/routes/dashboard.routes.js
+M	backend/src/routes/match.routes.js
+M	backend/src/routes/tournament.routes.js
+M	backend/src/routes/transaction.routes.js
+M	backend/src/routes/user.routes.js
+M	backend/src/server.js
+M	index.html
+M	src/App.tsx
+M	src/components/dashboard/StatCard.tsx
+M	src/components/layout/AppLayout.tsx
+M	src/components/layout/AppSidebar.tsx
+M	src/components/ui/skeleton.tsx
+M	src/components/ui/sonner.tsx
+M	src/context/AuthContext.tsx
+M	src/context/ThemeContext.tsx
+M	src/index.css
+M	src/pages/Alerts.tsx
+M	src/pages/Dashboard.tsx
+M	src/pages/Live.tsx
+M	src/pages/Login.tsx
+M	src/pages/Matches.tsx
+M	src/pages/Reports.tsx
+M	src/pages/Tournaments.tsx
+M	src/pages/Transactions.tsx
+M	src/pages/Users.tsx
+M	src/services/apiService.ts
+M	src/services/authService.ts
+M	tsconfig.app.json
