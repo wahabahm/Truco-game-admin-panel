@@ -8,30 +8,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Bell, CheckCircle2, XCircle, AlertTriangle, Info, CheckCheck, X } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Bell, CheckCircle2, XCircle, AlertTriangle, Info, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Alert, AlertSummary, CreateAlertForm } from '@/types';
+import { logger } from '@/utils/logger';
+import { ERROR_MESSAGES } from '@/constants';
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'acknowledged' | 'resolved' | 'dismissed'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [summary, setSummary] = useState<any>(null);
-  const [formData, setFormData] = useState({
+  const [summary, setSummary] = useState<AlertSummary | null>(null);
+  const [formData, setFormData] = useState<CreateAlertForm>({
     title: '',
     message: '',
     type: 'info',
     severity: 'medium'
   });
-
-  useEffect(() => {
-    fetchAlerts();
-    fetchSummary();
-  }, [filter, typeFilter]);
 
   const fetchAlerts = async () => {
     setIsLoading(true);
@@ -40,8 +37,10 @@ const Alerts = () => {
       const type = typeFilter === 'all' ? undefined : typeFilter;
       const data = await apiService.getAdminAlerts(status, type);
       setAlerts(data);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load alerts');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR;
+      logger.error('Failed to load alerts:', error);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -51,10 +50,16 @@ const Alerts = () => {
     try {
       const data = await apiService.getAdminAlertsSummary();
       setSummary(data);
-    } catch (error: any) {
-      console.error('Failed to load summary:', error);
+    } catch (error) {
+      logger.error('Failed to load summary:', error);
     }
   };
+
+  useEffect(() => {
+    fetchAlerts();
+    fetchSummary();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, typeFilter]);
 
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,8 +72,10 @@ const Alerts = () => {
         fetchAlerts();
         fetchSummary();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create alert');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to create alert:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -80,8 +87,10 @@ const Alerts = () => {
         fetchAlerts();
         fetchSummary();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to acknowledge alert');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to acknowledge alert:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -93,8 +102,10 @@ const Alerts = () => {
         fetchAlerts();
         fetchSummary();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to resolve alert');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to resolve alert:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -106,12 +117,14 @@ const Alerts = () => {
         fetchAlerts();
         fetchSummary();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to dismiss alert');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to dismiss alert:', error);
+      toast.error(errorMessage);
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: Alert['type']) => {
     switch (type) {
       case 'error': return AlertTriangle;
       case 'warning': return AlertTriangle;
@@ -142,17 +155,24 @@ const Alerts = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 animate-fade-in">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Alerts Management</h1>
-            <p className="text-muted-foreground mt-1.5">
-              Manage system alerts and notifications
-            </p>
+      <div className="p-6 md:p-8 lg:p-10 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border/60">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+              <Bell className="h-6 w-6 text-white" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                Alerts Management
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Manage system alerts and notifications
+              </p>
+            </div>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Alert
               </Button>
@@ -189,7 +209,7 @@ const Alerts = () => {
                   <Label htmlFor="type">Type</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
+                    onValueChange={(value) => setFormData({ ...formData, type: value as CreateAlertForm['type'] })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -207,7 +227,7 @@ const Alerts = () => {
                   <Label htmlFor="severity">Severity</Label>
                   <Select
                     value={formData.severity}
-                    onValueChange={(value) => setFormData({ ...formData, severity: value })}
+                    onValueChange={(value) => setFormData({ ...formData, severity: value as CreateAlertForm['severity'] })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -234,44 +254,44 @@ const Alerts = () => {
         {/* Summary Cards */}
         {summary && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary.total || 0}</div>
+                <div className="text-3xl font-bold">{summary.total || 0}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <Card className="border-destructive/30 bg-destructive/5 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-destructive">Active</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-destructive">{summary.active || 0}</div>
+                <div className="text-3xl font-bold text-destructive">{summary.active || 0}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Acknowledged</CardTitle>
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Acknowledged</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary.acknowledged || 0}</div>
+                <div className="text-3xl font-bold">{summary.acknowledged || 0}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+            <Card className="border-success/30 bg-success/5 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-success">Resolved</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-success">{summary.resolved || 0}</div>
+                <div className="text-3xl font-bold text-success">{summary.resolved || 0}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Dismissed</CardTitle>
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Dismissed</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary.dismissed || 0}</div>
+                <div className="text-3xl font-bold">{summary.dismissed || 0}</div>
               </CardContent>
             </Card>
           </div>
@@ -279,7 +299,7 @@ const Alerts = () => {
 
         {/* Filters */}
         <div className="flex gap-4">
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as any)} className="w-full">
+          <Tabs value={filter} onValueChange={(value) => setFilter(value as typeof filter)} className="w-full">
             <TabsList>
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="active">Active</TabsTrigger>
@@ -304,7 +324,7 @@ const Alerts = () => {
         </div>
 
         {/* Alerts Table */}
-        <div className="border rounded-xl shadow-sm overflow-hidden">
+        <div className="border rounded-xl shadow-sm overflow-hidden bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -320,33 +340,50 @@ const Alerts = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={7} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-muted-foreground">Loading alerts...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : alerts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">No alerts found</TableCell>
+                  <TableCell colSpan={7} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <Bell className="h-12 w-12 text-muted-foreground/50" />
+                      <div>
+                        <p className="font-medium">No alerts found</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {filter === 'all' ? 'No alerts in the system' : `No ${filter} alerts`}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 alerts.map((alert) => {
                   const Icon = getTypeIcon(alert.type);
                   return (
-                    <TableRow key={alert.id}>
+                    <TableRow key={alert.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell>
-                        <Icon className="h-4 w-4" />
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                          <Icon className="h-4 w-4" />
+                        </div>
                       </TableCell>
-                      <TableCell className="font-medium">{alert.title}</TableCell>
-                      <TableCell className="max-w-md truncate">{alert.message}</TableCell>
+                      <TableCell className="font-semibold">{alert.title}</TableCell>
+                      <TableCell className="max-w-md truncate text-muted-foreground">{alert.message}</TableCell>
                       <TableCell>
-                        <Badge variant={getSeverityColor(alert.severity)}>
+                        <Badge variant={getSeverityColor(alert.severity)} className="font-medium">
                           {alert.severity}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getTypeColor(alert.type)}>
+                        <Badge variant={getTypeColor(alert.type)} className="font-medium">
                           {alert.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
                         {new Date(alert.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
@@ -356,8 +393,9 @@ const Alerts = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleAcknowledge(alert.id)}
+                              className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                             >
-                              <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                              <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
                               Acknowledge
                             </Button>
                           )}
@@ -366,8 +404,9 @@ const Alerts = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleResolve(alert.id)}
+                              className="hover:bg-success/10 hover:text-success hover:border-success/30"
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
                               Resolve
                             </Button>
                           )}
@@ -376,8 +415,9 @@ const Alerts = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleDismiss(alert.id)}
+                              className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                             >
-                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              <XCircle className="h-3.5 w-3.5 mr-1.5" />
                               Dismiss
                             </Button>
                           )}

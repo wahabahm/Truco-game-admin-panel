@@ -5,37 +5,98 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Ban, CheckCircle, Coins, Plus, Minus, Trophy, TrendingDown } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Ban, CheckCircle, Coins, Plus, Minus, Trophy, TrendingDown, Users as UsersIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import type { User } from '@/types';
+import { logger } from '@/utils/logger';
+import { ERROR_MESSAGES } from '@/constants';
 
 const Users = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [coinDialogOpen, setCoinDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [coinAmount, setCoinAmount] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [coinDialogOpen, setCoinDialogOpen] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [coinAmount, setCoinAmount] = useState<string>('');
   const [coinOperation, setCoinOperation] = useState<'add' | 'remove'>('add');
 
   useEffect(() => {
+    let isMounted = true;
+    let abortController: AbortController | null = null;
+    
     const fetchUsers = async () => {
+      if (!isMounted) return;
+      
       setIsLoading(true);
-      const data = await apiService.getUsers();
-      setUsers(data);
-      setIsLoading(false);
+      abortController = new AbortController();
+      
+      // Set a timeout to abort the request (8 seconds)
+      const timeoutId = setTimeout(() => {
+        if (abortController) {
+          abortController.abort();
+        }
+      }, 8000);
+      
+      try {
+        const data = await apiService.getUsers(undefined, abortController.signal);
+        
+        clearTimeout(timeoutId);
+        
+        if (isMounted && !abortController.signal.aborted) {
+          setUsers(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        
+        if (isMounted && abortController) {
+          // Check if error is due to abort (timeout or component unmount)
+          const isAbortError = error instanceof Error && error.name === 'AbortError';
+          
+          if (isAbortError) {
+            // Request was aborted - check if it was due to timeout
+            if (abortController.signal.aborted) {
+              logger.warn('Request aborted (likely timeout)');
+              toast.error('Request timeout. Please check if backend server is running.');
+            }
+            setUsers([]);
+          } else {
+            // Real error occurred
+            const errorMessage = error instanceof Error 
+              ? (error.message || ERROR_MESSAGES.NETWORK_ERROR)
+              : ERROR_MESSAGES.NETWORK_ERROR;
+            
+            logger.error('Failed to fetch users:', error);
+            toast.error(errorMessage);
+            setUsers([]); // Set empty array on error to prevent hanging
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
+    
     fetchUsers();
+    
+    return () => {
+      isMounted = false;
+      if (abortController) {
+        abortController.abort();
+      }
+    };
   }, []);
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.id.toString().includes(searchTerm.toLowerCase())
+  const filteredUsers = (users || []).filter(user =>
+    user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user?.id?.toString().includes(searchTerm.toLowerCase())
   );
 
-  const toggleUserStatus = async (userId: string, currentStatus: string) => {
+  const toggleUserStatus = async (userId: string, currentStatus: User['status']) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
       await apiService.updateUserStatus(userId, newStatus);
@@ -45,12 +106,14 @@ const Users = () => {
       ));
       
       toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update user status');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to update user status:', error);
+      toast.error(errorMessage);
     }
   };
 
-  const handleCoinManagement = (user: any) => {
+  const handleCoinManagement = (user: User) => {
     setSelectedUser(user);
     setCoinAmount('');
     setCoinOperation('add');
@@ -68,15 +131,14 @@ const Users = () => {
       const amount = parseFloat(coinAmount);
       const result = await apiService.updateUserCoins(selectedUser.id, amount, coinOperation);
       
-      if (result.success) {
+      if (result.success && result.data) {
+        const updatedUser = result.data as User;
         // Update user coins in local state
         setUsers(users.map(user =>
           user.id === selectedUser.id 
             ? { 
                 ...user, 
-                coins: result.user?.coins || (coinOperation === 'add' 
-                  ? user.coins + amount 
-                  : Math.max(0, user.coins - amount))
+                coins: updatedUser.coins
               } 
             : user
         ));
@@ -86,64 +148,96 @@ const Users = () => {
         setCoinAmount('');
         setSelectedUser(null);
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update coins');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to update coins:', error);
+      toast.error(errorMessage);
     }
   };
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 animate-fade-in">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
-            <p className="text-muted-foreground mt-1.5">
-              Manage registered players, stats, and coin balances
-            </p>
+      <div className="p-6 md:p-8 lg:p-10 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border/60">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+              <UsersIcon className="h-6 w-6 text-white" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                Users Management
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Manage registered players, stats, and coin balances
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by name, email, or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+              className="pl-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 border-border/50 bg-background"
             />
           </div>
+          <Badge variant="outline" className="px-4 py-2 text-sm font-semibold border-primary/20 bg-primary/5">
+            {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+          </Badge>
         </div>
 
-        <div className="border rounded-xl shadow-sm overflow-hidden">
+        <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Stats</TableHead>
-                <TableHead>Coins</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead className="font-semibold text-foreground">ID</TableHead>
+                <TableHead className="font-semibold text-foreground">Name</TableHead>
+                <TableHead className="font-semibold text-foreground">Email</TableHead>
+                <TableHead className="font-semibold text-foreground">Stats</TableHead>
+                <TableHead className="font-semibold text-foreground">Coins</TableHead>
+                <TableHead className="font-semibold text-foreground">Status</TableHead>
+                <TableHead className="font-semibold text-foreground">Joined</TableHead>
+                <TableHead className="font-semibold text-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
-                </TableRow>
+                // Skeleton loading state
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`} className="hover:bg-transparent">
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+                  </TableRow>
+                ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">No users found</TableCell>
+                  <TableCell colSpan={8} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <UsersIcon size={48} className="text-muted-foreground/50" />
+                      <div>
+                        <p className="font-medium">No users found</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {searchTerm ? 'Try adjusting your search terms' : 'No users registered yet'}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-muted/50">
-                    <TableCell className="font-mono text-sm">{user.id}</TableCell>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                  <TableRow key={user.id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
+                    <TableCell className="font-mono text-xs text-muted-foreground">{user.id.slice(0, 8)}...</TableCell>
+                    <TableCell className="font-semibold text-foreground">{user.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
@@ -159,20 +253,26 @@ const Users = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{user.coins}</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-accent/10">
+                          <Coins className="h-3.5 w-3.5 text-accent" />
+                          <span className="font-semibold">{user.coins}</span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0"
+                          className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
                           onClick={() => handleCoinManagement(user)}
                           title="Manage coins"
                         >
-                          <Coins className="h-3.5 w-3.5" />
+                          <Coins className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
+                      <Badge 
+                        variant={user.status === 'active' ? 'default' : 'destructive'}
+                        className={user.status === 'active' ? 'bg-success/10 text-success border-success/30' : ''}
+                      >
                         {user.status}
                       </Badge>
                     </TableCell>
@@ -183,15 +283,19 @@ const Users = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => toggleUserStatus(user.id, user.status)}
+                          className={user.status === 'active' 
+                            ? 'hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30' 
+                            : 'hover:bg-success/10 hover:text-success hover:border-success/30'
+                          }
                         >
                           {user.status === 'active' ? (
                             <>
-                              <Ban className="h-3 w-3 mr-1" />
+                              <Ban className="h-3.5 w-3.5 mr-1.5" />
                               Suspend
                             </>
                           ) : (
                             <>
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                               Activate
                             </>
                           )}
@@ -207,23 +311,32 @@ const Users = () => {
 
         {/* Coin Management Dialog */}
         <Dialog open={coinDialogOpen} onOpenChange={setCoinDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Manage Coins</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-xl">Manage Coins</DialogTitle>
+              <DialogDescription className="text-base">
                 {selectedUser && (
-                  <>Manage coins for <strong>{selectedUser.name}</strong> (Current: {selectedUser.coins} coins)</>
+                  <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                    <div className="text-sm text-muted-foreground mb-1">User</div>
+                    <div className="font-semibold">{selectedUser.name}</div>
+                    <div className="text-sm text-muted-foreground mt-2">Current Balance</div>
+                    <div className="text-lg font-bold text-primary">{selectedUser.coins} coins</div>
+                  </div>
                 )}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCoinSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Operation</Label>
-                <div className="flex gap-2">
+            <form onSubmit={handleCoinSubmit} className="space-y-5 mt-4">
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Operation Type</Label>
+                <div className="flex gap-3">
                   <Button
                     type="button"
                     variant={coinOperation === 'add' ? 'default' : 'outline'}
-                    className="flex-1"
+                    className={`flex-1 h-12 transition-all duration-200 ${
+                      coinOperation === 'add' 
+                        ? 'shadow-md' 
+                        : 'hover:bg-success/10 hover:border-success/30 hover:text-success'
+                    }`}
                     onClick={() => setCoinOperation('add')}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -231,8 +344,12 @@ const Users = () => {
                   </Button>
                   <Button
                     type="button"
-                    variant={coinOperation === 'remove' ? 'default' : 'outline'}
-                    className="flex-1"
+                    variant={coinOperation === 'remove' ? 'destructive' : 'outline'}
+                    className={`flex-1 h-12 transition-all duration-200 ${
+                      coinOperation === 'remove' 
+                        ? 'shadow-md' 
+                        : 'hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive'
+                    }`}
                     onClick={() => setCoinOperation('remove')}
                   >
                     <Minus className="h-4 w-4 mr-2" />
@@ -241,7 +358,7 @@ const Users = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="coinAmount">Amount</Label>
+                <Label htmlFor="coinAmount" className="text-sm font-semibold">Amount</Label>
                 <Input
                   id="coinAmount"
                   type="number"
@@ -249,24 +366,44 @@ const Users = () => {
                   value={coinAmount}
                   onChange={(e) => setCoinAmount(e.target.value)}
                   placeholder="Enter coin amount"
+                  className="h-11"
                   required
                 />
               </div>
-              {selectedUser && coinOperation === 'remove' && coinAmount && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <strong>New balance:</strong> {Math.max(0, selectedUser.coins - parseFloat(coinAmount) || 0)} coins
+              {selectedUser && coinAmount && (
+                <div className={`p-4 rounded-lg border-2 ${
+                  coinOperation === 'add' 
+                    ? 'bg-success/5 border-success/20' 
+                    : 'bg-destructive/5 border-destructive/20'
+                }`}>
+                  <div className="text-xs text-muted-foreground mb-1">New Balance</div>
+                  <div className={`text-2xl font-bold ${
+                    coinOperation === 'add' ? 'text-success' : 'text-destructive'
+                  }`}>
+                    {coinOperation === 'add' 
+                      ? selectedUser.coins + (parseFloat(coinAmount) || 0)
+                      : Math.max(0, selectedUser.coins - (parseFloat(coinAmount) || 0))
+                    } coins
+                  </div>
                 </div>
               )}
-              {selectedUser && coinOperation === 'add' && coinAmount && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <strong>New balance:</strong> {selectedUser.coins + (parseFloat(coinAmount) || 0)} coins
-                </div>
-              )}
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setCoinDialogOpen(false)}>
+              <div className="flex gap-3 justify-end pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setCoinDialogOpen(false)}
+                  className="px-6"
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit"
+                  className={`px-6 ${
+                    coinOperation === 'add' 
+                      ? 'bg-gradient-to-r from-success to-success/80' 
+                      : 'bg-gradient-to-r from-destructive to-destructive/80'
+                  }`}
+                >
                   {coinOperation === 'add' ? 'Add' : 'Remove'} Coins
                 </Button>
               </div>

@@ -8,14 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Calendar, Trophy, Users, XCircle, Eye, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Tournament, CreateTournamentForm } from '@/types';
+import { logger } from '@/utils/logger';
+import { ERROR_MESSAGES } from '@/constants';
 
 const Tournaments = () => {
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [selectedTournament, setSelectedTournament] = useState<any>(null);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -36,36 +39,48 @@ const Tournaments = () => {
     winnerId: ''
   });
 
-  useEffect(() => {
-    fetchTournaments();
-  }, [filter]);
-
   const fetchTournaments = async () => {
     setIsLoading(true);
     try {
       const status = filter === 'all' ? undefined : filter;
       const data = await apiService.getTournaments(status);
       setTournaments(data);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load tournaments');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR;
+      logger.error('Failed to load tournaments:', error);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchTournaments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
   const handleCreateTournament = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await apiService.createTournament(formData);
-      if (result.success) {
-        setTournaments([result.tournament, ...tournaments]);
+      const result = await apiService.createTournament(formData as CreateTournamentForm);
+      if (result.success && result.data) {
         toast.success('Tournament created successfully!');
         setIsCreateDialogOpen(false);
         setFormData({ name: '', type: 'public', maxPlayers: '4', entryCost: '', prizePool: '', startDate: '' });
-        fetchTournaments();
+        // Switch to registration tab if not already on all or registration tab
+        // so the newly created tournament is visible
+        // useEffect will automatically fetch tournaments when filter changes
+        if (filter !== 'all' && filter !== 'registration') {
+          setFilter('registration');
+        } else {
+          // Refresh the list to show the newly created tournament
+          fetchTournaments();
+        }
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create tournament');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to create tournament:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -74,8 +89,10 @@ const Tournaments = () => {
       const tournament = await apiService.getTournament(tournamentId);
       setSelectedTournament(tournament);
       setIsViewDialogOpen(true);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load tournament details');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR;
+      logger.error('Failed to load tournament details:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -83,16 +100,18 @@ const Tournaments = () => {
     try {
       const result = await apiService.cancelTournament(tournamentId, reason);
       if (result.success) {
-        toast.success(`Tournament cancelled. ${result.refundedCount} participants refunded.`);
+        toast.success('Tournament cancelled successfully.');
         setIsCancelDialogOpen(false);
         fetchTournaments();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to cancel tournament');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to cancel tournament:', error);
+      toast.error(errorMessage);
     }
   };
 
-  const handleRecordMatch = (tournament: any, roundNumber: number, matchIndex: number) => {
+  const handleRecordMatch = (tournament: Tournament, roundNumber: number, matchIndex: number) => {
     setSelectedTournament(tournament);
     setMatchData({
       roundNumber,
@@ -104,7 +123,7 @@ const Tournaments = () => {
 
   const handleSubmitMatchResult = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!matchData.winnerId) {
+    if (!selectedTournament || !matchData.winnerId) {
       toast.error('Please select a winner');
       return;
     }
@@ -117,13 +136,15 @@ const Tournaments = () => {
         matchData.winnerId
       );
       if (result.success) {
-        toast.success(result.message);
+        toast.success('Match result recorded successfully');
         setIsMatchDialogOpen(false);
         await handleViewTournament(selectedTournament.id);
         fetchTournaments();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to record match result');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to record match result:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -139,23 +160,30 @@ const Tournaments = () => {
 
   const getParticipantName = (participantId: string) => {
     if (!selectedTournament) return `User ${participantId}`;
-    const participant = selectedTournament.participants?.find((p: any) => p.id === participantId);
+    const participant = selectedTournament.participants?.find((p) => p.id === participantId);
     return participant?.name || `User ${participantId}`;
   };
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 animate-fade-in">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
-            <p className="text-muted-foreground mt-1.5">
-              Create and manage tournaments (4 & 8 players)
-            </p>
+      <div className="p-6 md:p-8 lg:p-10 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border/60">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+              <Trophy className="h-6 w-6 text-white" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                Tournaments
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Create and manage tournaments (4 & 8 players)
+              </p>
+            </div>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="shadow-lg hover:shadow-xl transition-all duration-200">
+              <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Tournament
               </Button>
@@ -259,7 +287,7 @@ const Tournaments = () => {
           </Dialog>
         </div>
 
-        <Tabs value={filter} onValueChange={(value) => setFilter(value as any)} className="w-full">
+        <Tabs value={filter} onValueChange={(value) => setFilter(value as typeof filter)} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-4">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="registration">Registration</TabsTrigger>
@@ -268,10 +296,10 @@ const Tournaments = () => {
           </TabsList>
         </Tabs>
 
-        <div className="border rounded-xl shadow-sm overflow-hidden">
+        <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableHead>Tournament Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Players</TableHead>
@@ -286,15 +314,30 @@ const Tournaments = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-muted-foreground">Loading tournaments...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : tournaments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">No tournaments found</TableCell>
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <Trophy className="h-12 w-12 text-muted-foreground/50" />
+                      <div>
+                        <p className="font-medium">No tournaments found</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Create your first tournament to get started
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 tournaments.map((tournament) => (
-                  <TableRow key={tournament.id} className="hover:bg-muted/50">
+                  <TableRow key={tournament.id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
                     <TableCell className="font-medium">{tournament.name}</TableCell>
                     <TableCell>
                       <Badge variant={tournament.type === 'public' ? 'default' : 'secondary'}>
@@ -320,7 +363,7 @@ const Tournaments = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {tournament.participantCount}/{tournament.maxPlayers}
+                      {tournament.participantCount ?? (tournament.players?.length ?? 0)}/{tournament.maxPlayers}
                     </TableCell>
                     <TableCell>
                       {tournament.startDate ? (
@@ -361,13 +404,13 @@ const Tournaments = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Cancel Tournament</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will cancel "{selectedTournament?.name}" and refund all {selectedTournament?.participantCount} participants.
+                                  This will cancel "{selectedTournament?.name}" and refund all {selectedTournament?.participantCount ?? selectedTournament?.players?.length ?? 0} participants.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Keep Tournament</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => handleCancelTournament(selectedTournament?.id)}
+                                  onClick={() => selectedTournament && handleCancelTournament(selectedTournament.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Cancel Tournament
@@ -408,10 +451,10 @@ const Tournaments = () => {
                       {selectedTournament.status}
                     </Badge>
                   </div>
-                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground">Participants</div>
                     <div className="text-lg font-bold mt-1">
-                      {selectedTournament.participantCount}/{selectedTournament.maxPlayers}
+                      {selectedTournament.participantCount ?? (selectedTournament.players?.length ?? 0)}/{selectedTournament.maxPlayers}
                     </div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
@@ -429,7 +472,7 @@ const Tournaments = () => {
                   <div>
                     <h3 className="font-semibold mb-3">Participants</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {selectedTournament.participants.map((participant: any, index: number) => (
+                      {selectedTournament.participants.map((participant, index: number) => (
                         <div key={participant.id || index} className="p-2 bg-muted rounded text-sm">
                           {participant.name || `Player ${index + 1}`}
                         </div>
@@ -443,11 +486,11 @@ const Tournaments = () => {
                   <div>
                     <h3 className="font-semibold mb-3">Tournament Bracket</h3>
                     <div className="space-y-4">
-                      {selectedTournament.bracket.rounds.map((round: any, roundIdx: number) => (
+                      {selectedTournament.bracket.rounds.map((round, roundIdx: number) => (
                         <div key={roundIdx} className="border rounded-lg p-4">
-                          <div className="font-medium mb-3">{round.name} (Round {round.roundNumber})</div>
+                          <div className="font-medium mb-3">{round.roundNumber ? `Round ${round.roundNumber}` : `Round ${roundIdx + 1}`}</div>
                           <div className="grid gap-3">
-                            {round.matches.map((match: any, matchIdx: number) => (
+                            {round.matches.map((match, matchIdx: number) => (
                               <div key={matchIdx} className="p-3 bg-muted rounded-lg">
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1">
@@ -465,7 +508,7 @@ const Tournaments = () => {
                                     <Badge variant={match.status === 'completed' ? 'secondary' : 'default'}>
                                       {match.status}
                                     </Badge>
-                                    {match.status === 'active' && match.player1Id && match.player2Id && (
+                                    {match.status === 'pending' && match.player1Id && match.player2Id && (
                                       <Button
                                         size="sm"
                                         variant="outline"
@@ -487,13 +530,13 @@ const Tournaments = () => {
                 )}
 
                 {/* Winner */}
-                {selectedTournament.winnerId && (
+                {(selectedTournament.winnerId || selectedTournament.champion) && (
                   <div className="p-4 bg-success/10 rounded-lg border border-success/20">
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-success" />
                       <div>
                         <div className="font-semibold text-success">Tournament Champion</div>
-                        <div className="text-sm">{selectedTournament.winnerName || getParticipantName(selectedTournament.winnerId)}</div>
+                        <div className="text-sm">{selectedTournament.winnerName || selectedTournament.championName || getParticipantName(selectedTournament.winnerId || selectedTournament.champion || '')}</div>
                       </div>
                     </div>
                   </div>
@@ -515,7 +558,7 @@ const Tournaments = () => {
             {selectedTournament && matchData.roundNumber > 0 && (
               <form onSubmit={handleSubmitMatchResult} className="space-y-4">
                 {(() => {
-                  const round = selectedTournament.bracket?.rounds?.find((r: any) => r.roundNumber === matchData.roundNumber);
+                  const round = selectedTournament?.bracket?.rounds?.find((r) => r.roundNumber === matchData.roundNumber);
                   const match = round?.matches?.[matchData.matchIndex];
                   if (!match) return null;
 
