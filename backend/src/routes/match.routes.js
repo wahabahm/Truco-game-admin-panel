@@ -1,15 +1,55 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import Match from '../models/Match.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+/**
+ * @swagger
+ * /api/matches:
+ *   get:
+ *     summary: Get all matches
+ *     description: Retrieve a list of all matches. Can be filtered by status.
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, completed, cancelled]
+ *         description: Filter matches by status
+ *     responses:
+ *       200:
+ *         description: List of matches retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 matches:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Match'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get all matches
 router.get('/', async (req, res) => {
   try {
@@ -54,7 +94,7 @@ router.get('/', async (req, res) => {
       matches: formattedMatches
     });
   } catch (error) {
-    console.error('Get matches error:', error);
+    logger.error('Get matches error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -63,8 +103,42 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * Get single match by ID
+ * @swagger
+ * /api/matches/{id}:
+ *   get:
+ *     summary: Get single match by ID
+ *     description: Retrieve detailed information about a specific match.
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Match ID
+ *     responses:
+ *       200:
+ *         description: Match details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 match:
+ *                   $ref: '#/components/schemas/Match'
+ *       404:
+ *         description: Match not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+// Get single match by ID
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -108,7 +182,7 @@ router.get('/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get match error:', error);
+    logger.error('Get match error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -116,6 +190,74 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/matches:
+ *   post:
+ *     summary: Create a new match (Admin only)
+ *     description: Create a new 1v1 match. Only admins can create matches.
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - type
+ *               - cost
+ *               - prize
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 255
+ *                 example: "Championship Match"
+ *               type:
+ *                 type: string
+ *                 enum: [public, private]
+ *                 example: "public"
+ *               cost:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 50
+ *               prize:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 100
+ *               matchDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2024-12-25T10:00:00Z"
+ *     responses:
+ *       201:
+ *         description: Match created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 match:
+ *                   $ref: '#/components/schemas/Match'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Create match (admin only)
 router.post('/', requireAdmin, [
   body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required'),
@@ -160,7 +302,7 @@ router.post('/', requireAdmin, [
       }
     });
   } catch (error) {
-    console.error('Create match error:', error);
+    logger.error('Create match error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -169,113 +311,258 @@ router.post('/', requireAdmin, [
 });
 
 /**
- * Auto-matchmaking: Automatically find and join an available match
- * Finds first available active match and joins it
+ * @swagger
+ * /api/matches/auto-join:
+ *   post:
+ *     summary: Auto-join available match
+ *     description: Automatically find and join the first available public match. Coins are automatically deducted.
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully joined a match
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully joined match"
+ *                 match:
+ *                   $ref: '#/components/schemas/Match'
+ *       400:
+ *         description: Insufficient coins or already in match
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: No available matches found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+// Auto-matchmaking: Automatically find and join an available match
 router.post('/auto-join', async (req, res) => {
+  const session = await mongoose.startSession();
+  
   try {
+    await session.withTransaction(async () => {
+      const userId = req.user.id;
+      const userIdObj = new mongoose.Types.ObjectId(userId);
+
+      // Check if user has enough coins first (optimization)
+      const user = await User.findById(userId).session(session);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Try to join as player1 first (atomic operation)
+      let availableMatch = await Match.findOneAndUpdate(
+        {
+          status: 'active',
+          type: 'public',
+          player1Id: null,
+          player2Id: { $ne: userIdObj }
+        },
+        {
+          $set: { player1Id: userIdObj }
+        },
+        {
+          new: true,
+          sort: { createdAt: 1 },
+          session
+        }
+      );
+
+      // If no match with empty player1, try player2
+      if (!availableMatch) {
+        availableMatch = await Match.findOneAndUpdate(
+          {
+            status: 'active',
+            type: 'public',
+            player1Id: { $ne: null, $ne: userIdObj },
+            player2Id: null
+          },
+          {
+            $set: { player2Id: userIdObj }
+          },
+          {
+            new: true,
+            sort: { createdAt: 1 },
+            session
+          }
+        );
+      }
+
+      if (!availableMatch) {
+        throw new Error('No available matches found');
+      }
+
+      // Verify user has enough coins
+      if (user.coins < availableMatch.cost) {
+        // Rollback the match join
+        const update = {};
+        if (availableMatch.player1Id?.toString() === userId) {
+          update.player1Id = null;
+        } else if (availableMatch.player2Id?.toString() === userId) {
+          update.player2Id = null;
+        }
+        await Match.findByIdAndUpdate(availableMatch._id, { $set: update }, { session });
+        throw new Error(`Insufficient coins. You need ${availableMatch.cost} coins to join this match.`);
+      }
+
+      // Deduct coins atomically
+      await User.findByIdAndUpdate(
+        userId,
+        { $inc: { coins: -availableMatch.cost } },
+        { session }
+      );
+
+      // Log transaction
+      await Transaction.create([{
+        userId: user._id,
+        type: 'match_entry',
+        amount: -availableMatch.cost,
+        description: `Entry fee for match: ${availableMatch.name}`,
+        matchId: availableMatch._id
+      }], { session });
+    });
+
+    // After transaction, get the updated match with populated players
     const userId = req.user.id;
-
-    // Find available matches (active, not full, public)
-    const availableMatch = await Match.findOne({
-      status: 'active',
-      type: 'public',
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const joinedMatch = await Match.findOne({
       $or: [
-        { player1Id: null },
-        { player2Id: null }
+        { player1Id: userIdObj },
+        { player2Id: userIdObj }
       ]
-    }).sort({ createdAt: 1 }); // Oldest first
+    })
+      .populate('player1Id', 'name email')
+      .populate('player2Id', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(1);
 
-    if (!availableMatch) {
+    if (!joinedMatch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found after joining'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Successfully joined match!',
+      match: {
+        id: joinedMatch._id.toString(),
+        name: joinedMatch.name,
+        type: joinedMatch.type,
+        cost: joinedMatch.cost,
+        prize: joinedMatch.prize,
+        status: joinedMatch.status,
+        player1Id: joinedMatch.player1Id?._id?.toString() || null,
+        player2Id: joinedMatch.player2Id?._id?.toString() || null,
+        player1Name: joinedMatch.player1Id?.name || null,
+        player2Name: joinedMatch.player2Id?.name || null
+      }
+    });
+  } catch (error) {
+    logger.error('Auto-join match error:', error);
+    const errorMessage = error.message || 'Server error while joining match';
+    
+    if (errorMessage === 'User not found') {
+      return res.status(404).json({
+        success: false,
+        message: errorMessage
+      });
+    }
+    
+    if (errorMessage.includes('Insufficient coins')) {
+      return res.status(400).json({
+        success: false,
+        message: errorMessage
+      });
+    }
+    
+    if (errorMessage === 'No available matches found') {
       return res.status(404).json({
         success: false,
         message: 'No available matches found. Create a new match or wait for one to become available.'
       });
     }
 
-    // Check if user has enough coins
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (user.coins < availableMatch.cost) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient coins. You need ${availableMatch.cost} coins to join this match.`
-      });
-    }
-
-    // Check if user is already in this match
-    const userIdStr = userId.toString();
-    if (availableMatch.player1Id?.toString() === userIdStr || availableMatch.player2Id?.toString() === userIdStr) {
-      return res.status(400).json({
-        success: false,
-        message: 'You are already in this match'
-      });
-    }
-
-    // Check if match is full (double check)
-    if (availableMatch.player1Id && availableMatch.player2Id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Match is full'
-      });
-    }
-
-    // Join match
-    if (!availableMatch.player1Id) {
-      availableMatch.player1Id = userId;
-    } else {
-      availableMatch.player2Id = userId;
-    }
-    await availableMatch.save();
-
-    // Deduct coins
-    user.coins -= availableMatch.cost;
-    await user.save();
-
-    // Log transaction
-    await Transaction.create({
-      userId: user._id,
-      type: 'match_entry',
-      amount: -availableMatch.cost,
-      description: `Entry fee for match: ${availableMatch.name}`,
-      matchId: availableMatch._id
-    });
-
-    // Populate match data for response
-    await availableMatch.populate('player1Id', 'name email');
-    await availableMatch.populate('player2Id', 'name email');
-
-    res.json({
-      success: true,
-      message: 'Successfully joined match!',
-      match: {
-        id: availableMatch._id.toString(),
-        name: availableMatch.name,
-        type: availableMatch.type,
-        cost: availableMatch.cost,
-        prize: availableMatch.prize,
-        status: availableMatch.status,
-        player1Id: availableMatch.player1Id?._id?.toString() || null,
-        player2Id: availableMatch.player2Id?._id?.toString() || null,
-        player1Name: availableMatch.player1Id?.name || null,
-        player2Name: availableMatch.player2Id?.name || null
-      }
-    });
-  } catch (error) {
-    console.error('Auto-join match error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error while joining match',
+      ...(process.env.NODE_ENV === 'development' && { error: errorMessage })
     });
+  } finally {
+    await session.endSession();
   }
 });
 
+/**
+ * @swagger
+ * /api/matches/{id}/join:
+ *   post:
+ *     summary: Join a specific match
+ *     description: Join a match by ID. Coins are automatically deducted. User must have sufficient coins.
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Match ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID to join the match
+ *     responses:
+ *       200:
+ *         description: Successfully joined match
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 match:
+ *                   $ref: '#/components/schemas/Match'
+ *       400:
+ *         description: Match full, insufficient coins, or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Match or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Join match
 router.post('/:id/join', [
   body('userId').notEmpty().withMessage('Valid user ID is required')
@@ -368,7 +655,7 @@ router.post('/:id/join', [
       message: 'Successfully joined match'
     });
   } catch (error) {
-    console.error('Join match error:', error);
+    logger.error('Join match error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -376,6 +663,71 @@ router.post('/:id/join', [
   }
 });
 
+/**
+ * @swagger
+ * /api/matches/{id}/result:
+ *   post:
+ *     summary: Record match result (Admin only)
+ *     description: Record the winner and loser of a match. Prize is automatically awarded to the winner. Only admins can record results.
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Match ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - winnerId
+ *               - loserId
+ *             properties:
+ *               winnerId:
+ *                 type: string
+ *                 description: User ID of the winner
+ *               loserId:
+ *                 type: string
+ *                 description: User ID of the loser
+ *     responses:
+ *       200:
+ *         description: Match result recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Match result recorded successfully"
+ *       400:
+ *         description: Invalid players or match not active
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Match not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Record match result (admin only)
 router.post('/:id/result', requireAdmin, [
   body('winnerId').notEmpty().withMessage('Valid winner ID is required'),
@@ -451,7 +803,7 @@ router.post('/:id/result', requireAdmin, [
       message: 'Match result recorded successfully'
     });
   } catch (error) {
-    console.error('Record match result error:', error);
+    logger.error('Record match result error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

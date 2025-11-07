@@ -6,12 +6,45 @@ import Match from '../models/Match.js';
 import Transaction from '../models/Transaction.js';
 import { generateBracket, progressToNextRound } from '../utils/bracketGenerator.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+/**
+ * @swagger
+ * /api/tournaments:
+ *   get:
+ *     summary: Get all tournaments
+ *     description: Retrieve a list of all tournaments with optional status filtering
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [registration, active, completed, cancelled]
+ *         description: Filter tournaments by status
+ *     responses:
+ *       200:
+ *         description: List of tournaments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 tournaments:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Tournament'
+ */
 /**
  * Get all tournaments
  * Supports filtering by status
@@ -60,7 +93,7 @@ router.get('/', async (req, res) => {
       tournaments: formattedTournaments
     });
   } catch (error) {
-    console.error('Get tournaments error:', error);
+    logger.error('Get tournaments error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -68,6 +101,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments/{id}:
+ *   get:
+ *     summary: Get tournament by ID
+ *     description: Retrieve a specific tournament with full bracket details
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     responses:
+ *       200:
+ *         description: Tournament retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 tournament:
+ *                   $ref: '#/components/schemas/Tournament'
+ *       404:
+ *         description: Tournament not found
+ */
 /**
  * Get tournament by ID with full bracket details
  */
@@ -112,7 +177,7 @@ router.get('/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get tournament error:', error);
+    logger.error('Get tournament error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -120,6 +185,28 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments/{id}/players:
+ *   get:
+ *     summary: Get tournament players
+ *     description: Retrieve list of all players registered in a tournament
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     responses:
+ *       200:
+ *         description: Tournament players retrieved successfully
+ *       404:
+ *         description: Tournament not found
+ */
 /**
  * Get tournament players list
  */
@@ -153,7 +240,7 @@ router.get('/:id/players', async (req, res) => {
       maxPlayers: tournament.maxPlayers
     });
   } catch (error) {
-    console.error('Get tournament players error:', error);
+    logger.error('Get tournament players error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -161,6 +248,61 @@ router.get('/:id/players', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments:
+ *   post:
+ *     summary: Create tournament (Admin only)
+ *     description: Create a new tournament. Validates duplicate tournament names.
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - type
+ *               - maxPlayers
+ *               - entryCost
+ *               - prizePool
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 255
+ *                 example: Spring Championship
+ *               type:
+ *                 type: string
+ *                 enum: [public, private]
+ *                 example: public
+ *               maxPlayers:
+ *                 type: integer
+ *                 enum: [4, 8]
+ *                 example: 8
+ *               entryCost:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 100
+ *               prizePool:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 800
+ *               startDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2024-03-15T10:00:00Z
+ *     responses:
+ *       201:
+ *         description: Tournament created successfully
+ *       400:
+ *         description: Validation error or duplicate tournament name
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Create tournament (Admin only)
  * Validates duplicate tournament names
@@ -206,7 +348,7 @@ router.post('/', requireAdmin, [
 
     res.status(201).json({
       success: true,
-      tournament: {
+      data: {
         id: tournament._id.toString(),
         name: tournament.name,
         type: tournament.type,
@@ -215,12 +357,14 @@ router.post('/', requireAdmin, [
         prizePool: tournament.prizePool,
         startDate: tournament.startDate,
         status: tournament.status,
+        players: [],
+        participants: [],
         participantCount: 0,
         createdAt: tournament.createdAt
       }
     });
   } catch (error) {
-    console.error('Create tournament error:', error);
+    logger.error('Create tournament error:', error);
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -234,6 +378,30 @@ router.post('/', requireAdmin, [
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments/{id}/join:
+ *   post:
+ *     summary: Join tournament
+ *     description: Register the current user for a tournament. Validates sufficient coins and prevents duplicate registration.
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     responses:
+ *       200:
+ *         description: Successfully joined tournament
+ *       400:
+ *         description: Tournament full, insufficient coins, or already registered
+ *       404:
+ *         description: Tournament not found
+ */
 /**
  * Join tournament
  * Validates sufficient coins and prevents duplicate registration
@@ -331,7 +499,7 @@ router.post('/:id/join', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Join tournament error:', error);
+    logger.error('Join tournament error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -339,6 +507,54 @@ router.post('/:id/join', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments/{id}/record-match:
+ *   post:
+ *     summary: Record match result in tournament (Admin only)
+ *     description: Record the result of a match in a tournament. Automatically progresses to next round and distributes prizes when tournament completes.
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - roundNumber
+ *               - matchIndex
+ *               - winnerId
+ *             properties:
+ *               roundNumber:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 1
+ *               matchIndex:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 0
+ *               winnerId:
+ *                 type: string
+ *                 example: user_id_here
+ *     responses:
+ *       200:
+ *         description: Match result recorded successfully
+ *       400:
+ *         description: Validation error or tournament not active
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Tournament not found
+ */
 /**
  * Record match result in tournament (Admin only)
  * Automatically progresses to next round and distributes prizes
@@ -442,7 +658,7 @@ router.post('/:id/record-match', requireAdmin, [
       }
     });
   } catch (error) {
-    console.error('Record tournament match error:', error);
+    logger.error('Record tournament match error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -450,6 +666,46 @@ router.post('/:id/record-match', requireAdmin, [
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments/{id}/update-award-percentage:
+ *   post:
+ *     summary: Update tournament award percentage (Admin only)
+ *     description: Change the prize distribution percentage for a tournament (default 80%)
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - percentage
+ *             properties:
+ *               percentage:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 example: 80
+ *     responses:
+ *       200:
+ *         description: Award percentage updated successfully
+ *       400:
+ *         description: Validation error or tournament already completed
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Tournament not found
+ */
 /**
  * Update tournament award percentage (Admin only)
  * Allows changing prize distribution percentage (default 80%)
@@ -499,7 +755,7 @@ router.post('/:id/update-award-percentage', requireAdmin, [
       }
     });
   } catch (error) {
-    console.error('Update award percentage error:', error);
+    logger.error('Update award percentage error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -507,6 +763,42 @@ router.post('/:id/update-award-percentage', requireAdmin, [
   }
 });
 
+/**
+ * @swagger
+ * /api/tournaments/{id}/cancel:
+ *   post:
+ *     summary: Cancel tournament (Admin only)
+ *     description: Cancel a tournament and refund all participants their entry fees
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: Technical issues
+ *     responses:
+ *       200:
+ *         description: Tournament cancelled and participants refunded
+ *       400:
+ *         description: Tournament already completed or cancelled
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Tournament not found
+ */
 /**
  * Cancel tournament and refund all participants (Admin only)
  */
@@ -569,7 +861,7 @@ router.post('/:id/cancel', requireAdmin, [
       refundedCount: tournament.participants.length
     });
   } catch (error) {
-    console.error('Cancel tournament error:', error);
+    logger.error('Cancel tournament error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

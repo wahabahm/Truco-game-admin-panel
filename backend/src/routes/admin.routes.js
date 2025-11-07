@@ -2,6 +2,7 @@ import express from 'express';
 import Alert from '../models/Alert.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
 import { body, validationResult } from 'express-validator';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -9,6 +10,21 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireAdmin);
 
+/**
+ * @swagger
+ * /api/admin/alerts/dashboard:
+ *   get:
+ *     summary: Get admin alerts dashboard (Admin only)
+ *     description: Returns alerts summary and recent alerts for the admin dashboard
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin alerts dashboard retrieved successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Get admin alerts dashboard
  */
@@ -48,7 +64,7 @@ router.get('/alerts/dashboard', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get admin alerts dashboard error:', error);
+    logger.error('Get admin alerts dashboard error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -56,6 +72,35 @@ router.get('/alerts/dashboard', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts:
+ *   get:
+ *     summary: List all alerts (Admin only)
+ *     description: Retrieve a list of all alerts with optional filtering
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, acknowledged, resolved, dismissed]
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: severity
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of alerts retrieved successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * List all alerts (admin)
  */
@@ -114,7 +159,7 @@ router.get('/alerts', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Admin list alerts error:', error);
+    logger.error('Admin list alerts error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -122,6 +167,29 @@ router.get('/alerts', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts/{id}:
+ *   get:
+ *     summary: Get alert by ID (Admin only)
+ *     description: Retrieve a specific alert by its ID
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Alert retrieved successfully
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Alert not found
+ */
 /**
  * Get alert by ID (admin)
  */
@@ -179,7 +247,7 @@ router.get('/alerts/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin get alert error:', error);
+    logger.error('Admin get alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -187,6 +255,27 @@ router.get('/alerts/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts/{id}/acknowledge:
+ *   post:
+ *     summary: Acknowledge alert (Admin only)
+ *     description: Mark an alert as acknowledged
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Alert acknowledged successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Acknowledge alert (admin)
  */
@@ -223,7 +312,7 @@ router.post('/alerts/:id/acknowledge', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin acknowledge alert error:', error);
+    logger.error('Admin acknowledge alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -231,6 +320,27 @@ router.post('/alerts/:id/acknowledge', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts/{id}/resolve:
+ *   post:
+ *     summary: Resolve alert (Admin only)
+ *     description: Mark an alert as resolved
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Alert resolved successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Resolve alert (admin)
  */
@@ -267,7 +377,7 @@ router.post('/alerts/:id/resolve', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin resolve alert error:', error);
+    logger.error('Admin resolve alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -275,6 +385,27 @@ router.post('/alerts/:id/resolve', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts/{id}/dismiss:
+ *   post:
+ *     summary: Dismiss alert (Admin only)
+ *     description: Mark an alert as dismissed
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Alert dismissed successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Dismiss alert (admin)
  */
@@ -311,7 +442,7 @@ router.post('/alerts/:id/dismiss', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin dismiss alert error:', error);
+    logger.error('Admin dismiss alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -319,6 +450,34 @@ router.post('/alerts/:id/dismiss', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts/bulk/acknowledge:
+ *   post:
+ *     summary: Bulk acknowledge alerts (Admin only)
+ *     description: Acknowledge multiple alerts at once
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - alertIds
+ *             properties:
+ *               alertIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Alerts acknowledged successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Bulk acknowledge alerts (admin)
  */
@@ -358,7 +517,7 @@ router.post('/alerts/bulk/acknowledge', [
       acknowledgedCount: result.modifiedCount
     });
   } catch (error) {
-    console.error('Admin bulk acknowledge alerts error:', error);
+    logger.error('Admin bulk acknowledge alerts error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -366,6 +525,21 @@ router.post('/alerts/bulk/acknowledge', [
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/alerts/stats/summary:
+ *   get:
+ *     summary: Get alerts summary (Admin only)
+ *     description: Returns summary statistics for alerts
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Alerts summary retrieved successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Get alerts summary/stats (admin)
  */
@@ -414,7 +588,7 @@ router.get('/alerts/stats/summary', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin get alerts summary error:', error);
+    logger.error('Admin get alerts summary error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

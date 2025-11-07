@@ -2,12 +2,61 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import Alert from '../models/Alert.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+/**
+ * @swagger
+ * /api/alerts/create:
+ *   post:
+ *     summary: Create alert
+ *     description: Create a new alert with title, message, type, and severity
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - message
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: System Maintenance
+ *               message:
+ *                 type: string
+ *                 example: Scheduled maintenance tonight at 2 AM
+ *               type:
+ *                 type: string
+ *                 enum: [info, warning, error, success, system]
+ *                 default: info
+ *               severity:
+ *                 type: string
+ *                 enum: [low, medium, high, critical]
+ *                 default: medium
+ *               relatedMatchId:
+ *                 type: string
+ *                 nullable: true
+ *               relatedTournamentId:
+ *                 type: string
+ *                 nullable: true
+ *               relatedUserId:
+ *                 type: string
+ *                 nullable: true
+ *     responses:
+ *       201:
+ *         description: Alert created successfully
+ *       400:
+ *         description: Validation error
+ */
 /**
  * Create alert
  */
@@ -52,7 +101,7 @@ router.post('/create', [
       }
     });
   } catch (error) {
-    console.error('Create alert error:', error);
+    logger.error('Create alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -60,6 +109,38 @@ router.post('/create', [
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts:
+ *   get:
+ *     summary: List alerts
+ *     description: Retrieve a list of all alerts with optional filtering
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, acknowledged, resolved, dismissed]
+ *         description: Filter alerts by status
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [info, warning, error, success, system]
+ *         description: Filter alerts by type
+ *       - in: query
+ *         name: severity
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, critical]
+ *         description: Filter alerts by severity
+ *     responses:
+ *       200:
+ *         description: List of alerts retrieved successfully
+ */
 /**
  * List alerts
  */
@@ -118,7 +199,7 @@ router.get('/', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('List alerts error:', error);
+    logger.error('List alerts error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -126,6 +207,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts/{id}:
+ *   get:
+ *     summary: Get alert by ID
+ *     description: Retrieve a specific alert by its ID
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Alert ID
+ *     responses:
+ *       200:
+ *         description: Alert retrieved successfully
+ *       404:
+ *         description: Alert not found
+ */
 /**
  * Get alert by ID
  */
@@ -183,7 +286,7 @@ router.get('/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get alert error:', error);
+    logger.error('Get alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -191,6 +294,30 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts/{id}:
+ *   post:
+ *     summary: Acknowledge alert
+ *     description: Mark an alert as acknowledged
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Alert ID
+ *     responses:
+ *       200:
+ *         description: Alert acknowledged successfully
+ *       400:
+ *         description: Cannot acknowledge resolved or dismissed alert
+ *       404:
+ *         description: Alert not found
+ */
 /**
  * Acknowledge alert
  */
@@ -227,7 +354,7 @@ router.post('/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Acknowledge alert error:', error);
+    logger.error('Acknowledge alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -235,6 +362,30 @@ router.post('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts/{id}/resolve:
+ *   post:
+ *     summary: Resolve alert
+ *     description: Mark an alert as resolved
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Alert ID
+ *     responses:
+ *       200:
+ *         description: Alert resolved successfully
+ *       400:
+ *         description: Cannot resolve dismissed alert
+ *       404:
+ *         description: Alert not found
+ */
 /**
  * Resolve alert
  */
@@ -271,7 +422,7 @@ router.post('/:id/resolve', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Resolve alert error:', error);
+    logger.error('Resolve alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -279,6 +430,30 @@ router.post('/:id/resolve', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts/{id}/dismiss:
+ *   post:
+ *     summary: Dismiss alert
+ *     description: Mark an alert as dismissed
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Alert ID
+ *     responses:
+ *       200:
+ *         description: Alert dismissed successfully
+ *       400:
+ *         description: Cannot dismiss resolved alert
+ *       404:
+ *         description: Alert not found
+ */
 /**
  * Dismiss alert
  */
@@ -315,7 +490,7 @@ router.post('/:id/dismiss', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Dismiss alert error:', error);
+    logger.error('Dismiss alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -323,6 +498,19 @@ router.post('/:id/dismiss', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts/stats/summary:
+ *   get:
+ *     summary: Get alerts summary
+ *     description: Returns summary statistics for alerts grouped by status, type, and severity
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Alerts summary retrieved successfully
+ */
 /**
  * Get alerts summary/stats
  */
@@ -371,7 +559,7 @@ router.get('/stats/summary', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get alerts summary error:', error);
+    logger.error('Get alerts summary error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -379,6 +567,35 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/alerts/bulk/acknowledge:
+ *   post:
+ *     summary: Bulk acknowledge alerts
+ *     description: Acknowledge multiple alerts at once
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - alertIds
+ *             properties:
+ *               alertIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["alert_id_1", "alert_id_2"]
+ *     responses:
+ *       200:
+ *         description: Alerts acknowledged successfully
+ *       400:
+ *         description: Validation error
+ */
 /**
  * Bulk acknowledge alerts
  */
@@ -418,7 +635,7 @@ router.post('/bulk/acknowledge', [
       acknowledgedCount: result.modifiedCount
     });
   } catch (error) {
-    console.error('Bulk acknowledge alerts error:', error);
+    logger.error('Bulk acknowledge alerts error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

@@ -3,12 +3,56 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users with optional search and status filtering
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name, email, or user ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, suspended]
+ *         description: Filter users by status
+ *     responses:
+ *       200:
+ *         description: List of users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get all users (with search)
 router.get('/', async (req, res) => {
   try {
@@ -55,7 +99,7 @@ router.get('/', async (req, res) => {
       users: formattedUsers
     });
   } catch (error) {
-    console.error('Get users error:', error);
+    logger.error('Get users error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -63,6 +107,48 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     description: Retrieve a specific user by their ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get user by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -90,7 +176,7 @@ router.get('/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user error:', error);
+    logger.error('Get user error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -98,6 +184,58 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/users/{id}/stats:
+ *   get:
+ *     summary: Get user statistics (Admin only)
+ *     description: Returns detailed statistics for a user including matches, tournaments, and economy data
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     matches:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: number
+ *                         won:
+ *                           type: number
+ *                         lost:
+ *                           type: number
+ *                         winRate:
+ *                           type: string
+ *                     tournaments:
+ *                       type: object
+ *                     economy:
+ *                       type: object
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Get user statistics (admin only)
  * Returns detailed stats: matches played, tournaments, transactions, etc.
@@ -214,7 +352,7 @@ router.get('/:id/stats', requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user stats error:', error);
+    logger.error('Get user stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -222,6 +360,45 @@ router.get('/:id/stats', requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/users/{id}/status:
+ *   patch:
+ *     summary: Update user status (Admin only)
+ *     description: Activate or suspend a user account
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, suspended]
+ *                 example: active
+ *     responses:
+ *       200:
+ *         description: User status updated successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: User not found
+ */
 // Update user status (admin only)
 router.patch('/:id/status', requireAdmin, [
   body('status').isIn(['active', 'suspended']).withMessage('Status must be active or suspended')
@@ -263,7 +440,7 @@ router.patch('/:id/status', requireAdmin, [
       message: `User ${status === 'active' ? 'activated' : 'suspended'} successfully`
     });
   } catch (error) {
-    console.error('Update user status error:', error);
+    logger.error('Update user status error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -271,6 +448,50 @@ router.patch('/:id/status', requireAdmin, [
   }
 });
 
+/**
+ * @swagger
+ * /api/users/{id}/coins:
+ *   patch:
+ *     summary: Update user coins (Admin only)
+ *     description: Add or remove coins from a user's account
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - operation
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 100
+ *               operation:
+ *                 type: string
+ *                 enum: [add, remove]
+ *                 example: add
+ *     responses:
+ *       200:
+ *         description: Coins updated successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: User not found
+ */
 // Update user coins (admin only)
 router.patch('/:id/coins', requireAdmin, [
   body('amount').isInt({ min: 1 }).withMessage('Amount must be a positive integer'),
@@ -327,7 +548,7 @@ router.patch('/:id/coins', requireAdmin, [
       }
     });
   } catch (error) {
-    console.error('Update coins error:', error);
+    logger.error('Update coins error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

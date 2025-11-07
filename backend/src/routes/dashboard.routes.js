@@ -4,12 +4,51 @@ import Match from '../models/Match.js';
 import Tournament from '../models/Tournament.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+/**
+ * @swagger
+ * /api/dashboard/stats:
+ *   get:
+ *     summary: Get dashboard statistics
+ *     description: Returns overall platform statistics including users, coins, matches, and tournaments
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     totalUsers:
+ *                       type: number
+ *                     totalCoins:
+ *                       type: number
+ *                     activePlayers:
+ *                       type: number
+ *                     ongoingMatches:
+ *                       type: number
+ *                     ongoingTournaments:
+ *                       type: number
+ *                     completedMatches:
+ *                       type: number
+ *                     completedTournaments:
+ *                       type: number
+ */
 /**
  * Get dashboard stats
  * Returns overall platform statistics
@@ -53,7 +92,7 @@ router.get('/stats', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get dashboard stats error:', error);
+    logger.error('Get dashboard stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -61,6 +100,19 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/dashboard/economy:
+ *   get:
+ *     summary: Get economy statistics
+ *     description: Returns detailed coin statistics including issued coins, coins in circulation, and usage statistics
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Economy statistics retrieved successfully
+ */
 /**
  * Get economy statistics
  * Returns detailed coin statistics (issued, in circulation, used in tournaments)
@@ -113,7 +165,7 @@ router.get('/economy', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get economy stats error:', error);
+    logger.error('Get economy stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -121,6 +173,19 @@ router.get('/economy', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/dashboard/user-growth:
+ *   get:
+ *     summary: Get user growth data
+ *     description: Returns monthly user registration and match completion data for the last 6 months
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User growth data retrieved successfully
+ */
 /**
  * Get user growth data (monthly for last 6 months)
  */
@@ -173,6 +238,28 @@ router.get('/user-growth', async (req, res) => {
       }
     ]);
 
+    // Get monthly tournament completions
+    const tournamentGrowth = await Tournament.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          completedAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$completedAt' },
+            month: { $month: '$completedAt' }
+          },
+          tournaments: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
     // Format data for last 6 months
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const data = [];
@@ -188,11 +275,15 @@ router.get('/user-growth', async (req, res) => {
       const matchData = matchGrowth.find(m => 
         m._id.year === date.getFullYear() && m._id.month === date.getMonth() + 1
       );
+      const tournamentData = tournamentGrowth.find(t => 
+        t._id.year === date.getFullYear() && t._id.month === date.getMonth() + 1
+      );
 
       data.push({
         month: monthNames[date.getMonth()],
         users: userData?.users || 0,
-        matches: matchData?.matches || 0
+        matches: matchData?.matches || 0,
+        tournaments: tournamentData?.tournaments || 0
       });
     }
 
@@ -201,7 +292,7 @@ router.get('/user-growth', async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Get user growth error:', error);
+    logger.error('Get user growth error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -209,6 +300,19 @@ router.get('/user-growth', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/dashboard/weekly-activity:
+ *   get:
+ *     summary: Get weekly activity data
+ *     description: Returns daily active users and match completions for the last 7 days
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Weekly activity data retrieved successfully
+ */
 /**
  * Get weekly activity data (last 7 days)
  */
@@ -291,7 +395,7 @@ router.get('/weekly-activity', async (req, res) => {
       data
     });
   } catch (error) {
-    console.error('Get weekly activity error:', error);
+    logger.error('Get weekly activity error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -299,6 +403,26 @@ router.get('/weekly-activity', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/dashboard/recent-activity:
+ *   get:
+ *     summary: Get recent activity feed
+ *     description: Returns a feed of recent activities including matches, tournaments, users, and transactions
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of activities to return
+ *     responses:
+ *       200:
+ *         description: Recent activity feed retrieved successfully
+ */
 /**
  * Get recent activity feed
  */
@@ -430,7 +554,7 @@ router.get('/recent-activity', async (req, res) => {
       activities: formattedActivities
     });
   } catch (error) {
-    console.error('Get recent activity error:', error);
+    logger.error('Get recent activity error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -438,6 +562,21 @@ router.get('/recent-activity', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/dashboard/system/status:
+ *   get:
+ *     summary: Get system status (Admin only)
+ *     description: Returns system health, database status, and basic metrics
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System status retrieved successfully
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * Get system status (admin only)
  * Returns system health, database status, and basic metrics
@@ -498,7 +637,7 @@ router.get('/system/status', requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get system status error:', error);
+    logger.error('Get system status error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

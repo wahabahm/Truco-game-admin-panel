@@ -1,12 +1,56 @@
 import express from 'express';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+/**
+ * @swagger
+ * /api/transactions:
+ *   get:
+ *     summary: Get all transactions
+ *     description: Retrieve a list of all transactions with optional filtering by user and type
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         description: Filter transactions by user ID
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [match_entry, match_win, match_loss, tournament_entry, tournament_win, admin_add, admin_remove]
+ *         description: Filter transactions by type
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: Maximum number of transactions to return
+ *     responses:
+ *       200:
+ *         description: List of transactions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 transactions:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Transaction'
+ */
 // Get all transactions
 router.get('/', async (req, res) => {
   try {
@@ -46,7 +90,7 @@ router.get('/', async (req, res) => {
       transactions: formattedTransactions
     });
   } catch (error) {
-    console.error('Get transactions error:', error);
+    logger.error('Get transactions error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
