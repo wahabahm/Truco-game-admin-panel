@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { connectDB } from './config/database.js';
+import { swaggerSpec, swaggerUi } from './config/swagger.js';
+import { validateEnv, getEnvConfig } from './utils/env.js';
+import { logger } from './utils/logger.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import matchRoutes from './routes/match.routes.js';
@@ -15,13 +18,19 @@ import adminRoutes from './routes/admin.routes.js';
 
 dotenv.config();
 
+// Validate environment variables
+validateEnv();
+const envConfig = getEnvConfig();
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = envConfig.port;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for Swagger UI
+}));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  origin: envConfig.frontendUrl,
   credentials: true
 }));
 app.use(morgan('dev'));
@@ -32,6 +41,15 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Truco Admin API is running' });
 });
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Truco Admin API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true // Keep auth token after page refresh
+  }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -45,11 +63,11 @@ app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error('Error middleware:', err);
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(envConfig.nodeEnv === 'development' && { stack: err.stack })
   });
 });
 
@@ -66,11 +84,12 @@ const startServer = async () => {
   try {
     await connectDB();
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`📊 Environment: ${envConfig.nodeEnv}`);
+      logger.info(`📚 Swagger API Docs: http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 };
