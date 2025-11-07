@@ -58,9 +58,11 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Indexes (email already has unique index, so we don't need to add it again)
+// Indexes for performance (email already has unique index)
 userSchema.index({ status: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ role: 1, status: 1 }); // Compound index for common queries
+userSchema.index({ createdAt: -1 }); // For sorting users by registration date
 
 const User = mongoose.model('User', userSchema);
 

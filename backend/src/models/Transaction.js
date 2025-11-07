@@ -36,10 +36,13 @@ const transactionSchema = new mongoose.Schema({
   }
 });
 
-// Indexes
+// Indexes for performance
 transactionSchema.index({ userId: 1 });
 transactionSchema.index({ createdAt: -1 });
 transactionSchema.index({ type: 1 });
+transactionSchema.index({ userId: 1, createdAt: -1 }); // For user transaction history
+transactionSchema.index({ userId: 1, type: 1 }); // For filtering user transactions by type
+transactionSchema.index({ matchId: 1 }); // For match-related transactions
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 

@@ -62,9 +62,15 @@ const matchSchema = new mongoose.Schema({
   }
 });
 
-// Indexes
+// Indexes for performance
 matchSchema.index({ status: 1 });
 matchSchema.index({ createdAt: -1 });
+matchSchema.index({ type: 1, status: 1 }); // For finding available public matches
+matchSchema.index({ player1Id: 1, status: 1 });
+matchSchema.index({ player2Id: 1, status: 1 });
+matchSchema.index({ winnerId: 1 });
+// Compound index for auto-join queries
+matchSchema.index({ status: 1, type: 1, player1Id: 1, player2Id: 1 });
 
 const Match = mongoose.model('Match', matchSchema);
 
