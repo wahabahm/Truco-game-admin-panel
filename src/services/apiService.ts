@@ -1,18 +1,39 @@
+import { API_CONFIG, STORAGE_KEYS } from '@/constants';
+import { logger } from '@/utils/logger';
+import type {
+  User,
+  Match,
+  Tournament,
+  Transaction,
+  DashboardStats,
+  UserGrowthData,
+  WeeklyActivityData,
+  RecentActivity,
+  Alert,
+  AlertSummary,
+  EconomyStats,
+  CreateMatchForm,
+  CreateTournamentForm,
+  CreateAlertForm,
+  ApiResponse,
+  UpdateUserData,
+} from '@/types';
+
 // API Base URL - Change this to your backend URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Helper function to get auth token
 const getToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem(STORAGE_KEYS.TOKEN);
 };
 
 // Helper function for API requests
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const token = getToken();
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> || {}),
   };
 
   if (token) {
@@ -20,50 +41,68 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Use AbortSignal if provided in options
+    const fetchOptions: RequestInit = {
       ...options,
       headers,
-    });
+    };
+    
+    // If signal is provided in options.body, we need to extract it
+    // Instead, we'll pass it through options directly
+    if (options.signal) {
+      fetchOptions.signal = options.signal;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
-    const data = await response.json();
+    let data: T;
+    try {
+      data = await response.json();
+    } catch (error) {
+      logger.error('Failed to parse API response:', error);
+      throw new Error('Invalid response from server');
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || 'API request failed');
+      const errorMessage = (data as unknown as { message?: string })?.message || 'API request failed';
+      throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    logger.error('API Error:', error);
     throw error;
   }
 };
 
 export const apiService = {
   // Users
-  getUsers: async (search?: string) => {
+  getUsers: async (search?: string, signal?: AbortSignal): Promise<User[]> => {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    const response = await apiRequest(`/users${params}`);
+    const response = await apiRequest<{ users: User[] }>(`/users${params}`, {
+      signal,
+    });
     return response.users || [];
   },
   
-  updateUser: async (id: string, data: any) => {
-    const response = await apiRequest(`/users/${id}`, {
+  updateUser: async (id: string, data: UpdateUserData): Promise<ApiResponse<User>> => {
+    const response = await apiRequest<ApiResponse<User>>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     return response;
   },
 
-  updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove') => {
-    const response = await apiRequest(`/users/${userId}/coins`, {
+  updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove'): Promise<ApiResponse<User>> => {
+    const response = await apiRequest<ApiResponse<User>>(`/users/${userId}/coins`, {
       method: 'PATCH',
       body: JSON.stringify({ amount, operation }),
     });
     return response;
   },
 
-  updateUserStatus: async (userId: string, status: 'active' | 'suspended') => {
-    const response = await apiRequest(`/users/${userId}/status`, {
+  updateUserStatus: async (userId: string, status: 'active' | 'suspended'): Promise<ApiResponse<User>> => {
+    const response = await apiRequest<ApiResponse<User>>(`/users/${userId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
@@ -71,44 +110,44 @@ export const apiService = {
   },
   
   // Matches
-  getMatches: async (status?: string) => {
+  getMatches: async (status?: string): Promise<Match[]> => {
     const params = status ? `?status=${status}` : '';
-    const response = await apiRequest(`/matches${params}`);
+    const response = await apiRequest<{ matches: Match[] }>(`/matches${params}`);
     return response.matches || [];
   },
   
-  createMatch: async (data: any) => {
-    const response = await apiRequest('/matches', {
+  createMatch: async (data: CreateMatchForm): Promise<ApiResponse<Match>> => {
+    const response = await apiRequest<ApiResponse<Match>>('/matches', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,
         type: data.type,
-        cost: parseInt(data.cost),
-        prize: parseInt(data.prize),
+        cost: typeof data.cost === 'number' ? data.cost : parseInt(String(data.cost), 10),
+        prize: typeof data.prize === 'number' ? data.prize : parseInt(String(data.prize), 10),
         matchDate: data.matchDate || null,
       }),
     });
     return response;
   },
 
-  joinMatch: async (matchId: string, userId: string) => {
-    const response = await apiRequest(`/matches/${matchId}/join`, {
+  joinMatch: async (matchId: string, userId: string): Promise<ApiResponse<Match>> => {
+    const response = await apiRequest<ApiResponse<Match>>(`/matches/${matchId}/join`, {
       method: 'POST',
       body: JSON.stringify({ userId }),
     });
     return response;
   },
 
-  autoJoinMatch: async () => {
-    const response = await apiRequest('/matches/auto-join', {
+  autoJoinMatch: async (): Promise<ApiResponse<Match>> => {
+    const response = await apiRequest<ApiResponse<Match>>('/matches/auto-join', {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  recordMatchResult: async (matchId: string, winnerId: string, loserId: string) => {
-    const response = await apiRequest(`/matches/${matchId}/result`, {
+  recordMatchResult: async (matchId: string, winnerId: string, loserId: string): Promise<ApiResponse<Match>> => {
+    const response = await apiRequest<ApiResponse<Match>>(`/matches/${matchId}/result`, {
       method: 'POST',
       body: JSON.stringify({ winnerId, loserId }),
     });
@@ -116,42 +155,42 @@ export const apiService = {
   },
   
   // Tournaments
-  getTournaments: async (status?: string) => {
+  getTournaments: async (status?: string): Promise<Tournament[]> => {
     const params = status ? `?status=${status}` : '';
-    const response = await apiRequest(`/tournaments${params}`);
+    const response = await apiRequest<{ tournaments: Tournament[] }>(`/tournaments${params}`);
     return response.tournaments || [];
   },
 
-  getTournament: async (id: string) => {
-    const response = await apiRequest(`/tournaments/${id}`);
+  getTournament: async (id: string): Promise<Tournament> => {
+    const response = await apiRequest<{ tournament: Tournament }>(`/tournaments/${id}`);
     return response.tournament;
   },
   
-  createTournament: async (data: any) => {
-    const response = await apiRequest('/tournaments', {
+  createTournament: async (data: CreateTournamentForm): Promise<ApiResponse<Tournament>> => {
+    const response = await apiRequest<ApiResponse<Tournament>>('/tournaments', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,
         type: data.type,
-        maxPlayers: parseInt(data.maxPlayers),
-        entryCost: parseInt(data.entryCost),
-        prizePool: parseInt(data.prizePool),
+        maxPlayers: typeof data.maxPlayers === 'number' ? data.maxPlayers : parseInt(String(data.maxPlayers), 10),
+        entryCost: typeof data.entryCost === 'number' ? data.entryCost : parseInt(String(data.entryCost), 10),
+        prizePool: typeof data.prizePool === 'number' ? data.prizePool : parseInt(String(data.prizePool), 10),
         startDate: data.startDate || null,
       }),
     });
     return response;
   },
 
-  joinTournament: async (tournamentId: string) => {
-    const response = await apiRequest(`/tournaments/${tournamentId}/join`, {
+  joinTournament: async (tournamentId: string): Promise<ApiResponse<Tournament>> => {
+    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/join`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  recordTournamentMatch: async (tournamentId: string, roundNumber: number, matchIndex: number, winnerId: string) => {
-    const response = await apiRequest(`/tournaments/${tournamentId}/record-match`, {
+  recordTournamentMatch: async (tournamentId: string, roundNumber: number, matchIndex: number, winnerId: string): Promise<ApiResponse<Tournament>> => {
+    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/record-match`, {
       method: 'POST',
       body: JSON.stringify({
         roundNumber,
@@ -162,8 +201,8 @@ export const apiService = {
     return response;
   },
 
-  cancelTournament: async (tournamentId: string, reason?: string) => {
-    const response = await apiRequest(`/tournaments/${tournamentId}/cancel`, {
+  cancelTournament: async (tournamentId: string, reason?: string): Promise<ApiResponse<Tournament>> => {
+    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/cancel`, {
       method: 'POST',
       body: JSON.stringify({ reason: reason || '' }),
     });
@@ -171,15 +210,15 @@ export const apiService = {
   },
   
   // Transactions
-  getTransactions: async (userId?: string) => {
+  getTransactions: async (userId?: string): Promise<Transaction[]> => {
     const params = userId ? `?userId=${userId}` : '';
-    const response = await apiRequest(`/transactions${params}`);
+    const response = await apiRequest<{ transactions: Transaction[] }>(`/transactions${params}`);
     return response.transactions || [];
   },
   
   // Dashboard stats
-  getDashboardStats: async () => {
-    const response = await apiRequest('/dashboard/stats');
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    const response = await apiRequest<{ stats: DashboardStats }>('/dashboard/stats');
     return response.stats || {
       totalUsers: 0,
       totalCoins: 0,
@@ -192,8 +231,8 @@ export const apiService = {
   },
   
   // Economy stats
-  getEconomyStats: async () => {
-    const response = await apiRequest('/dashboard/economy');
+  getEconomyStats: async (): Promise<EconomyStats> => {
+    const response = await apiRequest<{ economy: EconomyStats }>('/dashboard/economy');
     return response.economy || {
       totalCoinsInCirculation: 0,
       totalCoinsIssued: 0,
@@ -205,56 +244,56 @@ export const apiService = {
   },
   
   // Dashboard charts
-  getUserGrowthData: async () => {
-    const response = await apiRequest('/dashboard/user-growth');
+  getUserGrowthData: async (): Promise<UserGrowthData[]> => {
+    const response = await apiRequest<{ data: UserGrowthData[] }>('/dashboard/user-growth');
     return response.data || [];
   },
 
-  getWeeklyActivityData: async () => {
-    const response = await apiRequest('/dashboard/weekly-activity');
+  getWeeklyActivityData: async (): Promise<WeeklyActivityData[]> => {
+    const response = await apiRequest<{ data: WeeklyActivityData[] }>('/dashboard/weekly-activity');
     return response.data || [];
   },
 
-  getRecentActivity: async (limit?: number) => {
+  getRecentActivity: async (limit?: number): Promise<RecentActivity[]> => {
     const params = limit ? `?limit=${limit}` : '';
-    const response = await apiRequest(`/dashboard/recent-activity${params}`);
+    const response = await apiRequest<{ activities: RecentActivity[] }>(`/dashboard/recent-activity${params}`);
     return response.activities || [];
   },
 
   // Auth endpoints
-  logout: async () => {
-    const response = await apiRequest('/auth/logout', {
+  logout: async (): Promise<ApiResponse> => {
+    const response = await apiRequest<ApiResponse>('/auth/logout', {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  checkAdmin: async () => {
-    const response = await apiRequest('/auth/check-admin');
+  checkAdmin: async (): Promise<ApiResponse<{ isAdmin: boolean }>> => {
+    const response = await apiRequest<ApiResponse<{ isAdmin: boolean }>>('/auth/check-admin');
     return response;
   },
 
   // Match endpoints
-  getMatch: async (id: string) => {
-    const response = await apiRequest(`/matches/${id}`);
+  getMatch: async (id: string): Promise<Match> => {
+    const response = await apiRequest<{ match: Match }>(`/matches/${id}`);
     return response.match;
   },
 
   // User endpoints
-  getUserStats: async (userId: string) => {
-    const response = await apiRequest(`/users/${userId}/stats`);
+  getUserStats: async (userId: string): Promise<Record<string, unknown>> => {
+    const response = await apiRequest<{ stats: Record<string, unknown> }>(`/users/${userId}/stats`);
     return response.stats;
   },
 
   // Tournament endpoints
-  getTournamentPlayers: async (tournamentId: string) => {
-    const response = await apiRequest(`/tournaments/${tournamentId}/players`);
+  getTournamentPlayers: async (tournamentId: string): Promise<{ players: User[] }> => {
+    const response = await apiRequest<{ players: User[] }>(`/tournaments/${tournamentId}/players`);
     return response;
   },
 
-  updateTournamentAwardPercentage: async (tournamentId: string, percentage: number) => {
-    const response = await apiRequest(`/tournaments/${tournamentId}/update-award-percentage`, {
+  updateTournamentAwardPercentage: async (tournamentId: string, percentage: number): Promise<ApiResponse<Tournament>> => {
+    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/update-award-percentage`, {
       method: 'POST',
       body: JSON.stringify({ percentage }),
     });
@@ -262,14 +301,14 @@ export const apiService = {
   },
 
   // System status
-  getSystemStatus: async () => {
-    const response = await apiRequest('/dashboard/system/status');
+  getSystemStatus: async (): Promise<Record<string, unknown>> => {
+    const response = await apiRequest<{ status: Record<string, unknown> }>('/dashboard/system/status');
     return response.status;
   },
 
   // Alerts endpoints
-  createAlert: async (data: any) => {
-    const response = await apiRequest('/alerts/create', {
+  createAlert: async (data: CreateAlertForm): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>('/alerts/create', {
       method: 'POST',
       body: JSON.stringify({
         title: data.title,
@@ -285,52 +324,52 @@ export const apiService = {
     return response;
   },
 
-  getAlerts: async (status?: string, type?: string, severity?: string) => {
+  getAlerts: async (status?: string, type?: string, severity?: string): Promise<Alert[]> => {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (type) params.append('type', type);
     if (severity) params.append('severity', severity);
     const queryString = params.toString();
-    const response = await apiRequest(`/alerts${queryString ? `?${queryString}` : ''}`);
+    const response = await apiRequest<{ alerts: Alert[] }>(`/alerts${queryString ? `?${queryString}` : ''}`);
     return response.alerts || [];
   },
 
-  getAlert: async (id: string) => {
-    const response = await apiRequest(`/alerts/${id}`);
+  getAlert: async (id: string): Promise<Alert> => {
+    const response = await apiRequest<{ alert: Alert }>(`/alerts/${id}`);
     return response.alert;
   },
 
-  acknowledgeAlert: async (id: string) => {
-    const response = await apiRequest(`/alerts/${id}`, {
+  acknowledgeAlert: async (id: string): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>(`/alerts/${id}`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  resolveAlert: async (id: string) => {
-    const response = await apiRequest(`/alerts/${id}/resolve`, {
+  resolveAlert: async (id: string): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>(`/alerts/${id}/resolve`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  dismissAlert: async (id: string) => {
-    const response = await apiRequest(`/alerts/${id}/dismiss`, {
+  dismissAlert: async (id: string): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>(`/alerts/${id}/dismiss`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  getAlertsSummary: async () => {
-    const response = await apiRequest('/alerts/stats/summary');
-    return response.summary || {};
+  getAlertsSummary: async (): Promise<AlertSummary> => {
+    const response = await apiRequest<{ summary: AlertSummary }>('/alerts/stats/summary');
+    return response.summary || {} as AlertSummary;
   },
 
-  bulkAcknowledgeAlerts: async (alertIds: string[]) => {
-    const response = await apiRequest('/alerts/bulk/acknowledge', {
+  bulkAcknowledgeAlerts: async (alertIds: string[]): Promise<ApiResponse> => {
+    const response = await apiRequest<ApiResponse>('/alerts/bulk/acknowledge', {
       method: 'POST',
       body: JSON.stringify({ alertIds }),
     });
@@ -338,65 +377,65 @@ export const apiService = {
   },
 
   // Admin alerts endpoints
-  getAdminAlertsDashboard: async () => {
-    const response = await apiRequest('/admin/alerts/dashboard');
+  getAdminAlertsDashboard: async (): Promise<Record<string, unknown>> => {
+    const response = await apiRequest<{ dashboard: Record<string, unknown> }>('/admin/alerts/dashboard');
     return response.dashboard || {};
   },
 
-  getAdminAlerts: async (status?: string, type?: string, severity?: string) => {
+  getAdminAlerts: async (status?: string, type?: string, severity?: string): Promise<Alert[]> => {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (type) params.append('type', type);
     if (severity) params.append('severity', severity);
     const queryString = params.toString();
-    const response = await apiRequest(`/admin/alerts${queryString ? `?${queryString}` : ''}`);
+    const response = await apiRequest<{ alerts: Alert[] }>(`/admin/alerts${queryString ? `?${queryString}` : ''}`);
     return response.alerts || [];
   },
 
-  getAdminAlert: async (id: string) => {
-    const response = await apiRequest(`/admin/alerts/${id}`);
+  getAdminAlert: async (id: string): Promise<Alert> => {
+    const response = await apiRequest<{ alert: Alert }>(`/admin/alerts/${id}`);
     return response.alert;
   },
 
-  adminAcknowledgeAlert: async (id: string) => {
-    const response = await apiRequest(`/admin/alerts/${id}/acknowledge`, {
+  adminAcknowledgeAlert: async (id: string): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>(`/admin/alerts/${id}/acknowledge`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  adminResolveAlert: async (id: string) => {
-    const response = await apiRequest(`/admin/alerts/${id}/resolve`, {
+  adminResolveAlert: async (id: string): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>(`/admin/alerts/${id}/resolve`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  adminDismissAlert: async (id: string) => {
-    const response = await apiRequest(`/admin/alerts/${id}/dismiss`, {
+  adminDismissAlert: async (id: string): Promise<ApiResponse<Alert>> => {
+    const response = await apiRequest<ApiResponse<Alert>>(`/admin/alerts/${id}/dismiss`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  adminBulkAcknowledgeAlerts: async (alertIds: string[]) => {
-    const response = await apiRequest('/admin/alerts/bulk/acknowledge', {
+  adminBulkAcknowledgeAlerts: async (alertIds: string[]): Promise<ApiResponse> => {
+    const response = await apiRequest<ApiResponse>('/admin/alerts/bulk/acknowledge', {
       method: 'POST',
       body: JSON.stringify({ alertIds }),
     });
     return response;
   },
 
-  getAdminAlertsSummary: async () => {
-    const response = await apiRequest('/admin/alerts/stats/summary');
-    return response.summary || {};
+  getAdminAlertsSummary: async (): Promise<AlertSummary> => {
+    const response = await apiRequest<{ summary: AlertSummary }>('/admin/alerts/stats/summary');
+    return response.summary || {} as AlertSummary;
   },
   
   // Admin logs (for future)
-  getAdminLogs: async () => {
+  getAdminLogs: async (): Promise<unknown[]> => {
     // TODO: Implement when admin logs API is ready
     return [];
   }

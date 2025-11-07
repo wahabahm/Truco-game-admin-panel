@@ -1,5 +1,8 @@
+import { API_CONFIG, ERROR_MESSAGES, STORAGE_KEYS } from '@/constants';
+import { logger } from '@/utils/logger';
+
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export const authService = {
   login: async (email: string, password: string) => {
@@ -26,18 +29,18 @@ export const authService = {
         token: data.token,
         user: data.user
       };
-    } catch (error: any) {
-      console.error('Login error:', error);
+    } catch (error) {
+      logger.error('Login error:', error);
       return {
         success: false,
-        message: error.message || 'Network error. Please check if backend is running.'
+        message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
       };
     }
   },
   
   logout: async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
       
       // Call logout API if token exists
       if (token) {
@@ -51,17 +54,17 @@ export const authService = {
           });
         } catch (error) {
           // Continue with logout even if API call fails
-          console.error('Logout API error:', error);
+          logger.warn('Logout API error:', error);
         }
       }
 
       // Clear token from localStorage
-      localStorage.removeItem('token');
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
       return { success: true };
-    } catch (error: any) {
-      console.error('Logout error:', error);
+    } catch (error) {
+      logger.error('Logout error:', error);
       // Still clear local storage
-      localStorage.removeItem('token');
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
       return { success: true };
     }
   }
