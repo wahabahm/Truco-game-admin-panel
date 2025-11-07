@@ -1,12 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '@/services/authService';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-}
+import { logger } from '@/utils/logger';
+import { STORAGE_KEYS } from '@/constants';
+import type { User } from '@/types';
 
 interface AuthContextType {
   user: User | null;
@@ -23,11 +19,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const userData = localStorage.getItem(STORAGE_KEYS.USER);
     
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      try {
+        setUser(JSON.parse(userData) as User);
+      } catch (error) {
+        logger.error('Failed to parse user data from localStorage:', error);
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+      }
     }
     
     setIsLoading(false);
@@ -37,14 +39,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authService.login(email, password);
       if (response.success && response.user && response.token) {
-        setUser(response.user);
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user as User);
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.token);
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
         return true;
       }
       return false;
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       return false;
     }
   };
@@ -53,11 +55,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     } finally {
       setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER);
     }
   };
 
