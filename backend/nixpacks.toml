@@ -1,12 +1,21 @@
+[providers]
+node = "18"
+
+[variables]
+NPM_CONFIG_PRODUCTION = "false"
+
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["nodejs-18_x", "npm"]
 
 [phases.install]
-cmds = ["npm install"]
+dependsOn = ["setup"]
+cmds = [
+    "rm -f bun.lockb || true",
+    "npm install"
+]
 
 [phases.build]
-cmds = ["echo 'Build complete'"]
+dependsOn = ["install"]
 
 [start]
 cmd = "npm start"
-
