@@ -4,8 +4,7 @@
 
 const requiredEnvVars = [
   'MONGODB_URI',
-  'JWT_SECRET',
-  'PORT'
+  'JWT_SECRET'
 ];
 
 export const validateEnv = () => {
