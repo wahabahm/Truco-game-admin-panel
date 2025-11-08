@@ -43,6 +43,28 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Truco Admin API is running' });
 });
 
+// API root endpoint - provides API information
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Truco Admin API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      matches: '/api/matches',
+      tournaments: '/api/tournaments',
+      transactions: '/api/transactions',
+      dashboard: '/api/dashboard',
+      alerts: '/api/alerts',
+      admin: '/api/admin',
+      docs: '/api-docs',
+      health: '/health'
+    },
+    documentation: '/api-docs'
+  });
+});
+
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
