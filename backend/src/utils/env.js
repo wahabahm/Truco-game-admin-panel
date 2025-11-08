@@ -26,7 +26,7 @@ export const validateEnv = () => {
   }
 
   // Validate JWT_SECRET strength in production
-  if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET.length < 32) {
+  if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
     console.warn('⚠️  WARNING: JWT_SECRET should be at least 32 characters long in production!');
   }
 };

@@ -16,6 +16,7 @@ import dashboardRoutes from './routes/dashboard.routes.js';
 import alertRoutes from './routes/alert.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 
+// Load environment variables
 dotenv.config();
 
 // Validate environment variables

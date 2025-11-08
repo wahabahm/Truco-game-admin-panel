@@ -52,7 +52,7 @@ curl http://localhost:3000/api/users \
 
 Update your frontend `.env` or `vite.config.ts`:
 ```env
-VITE_API_URL = https://truco-game-admin-panel-production.up.railway.app/api
+VITE_API_URL=http://localhost:3000/api
 ```
 
 Or in `vite.config.ts`:
