@@ -83,10 +83,11 @@ app.use((req, res) => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
+    const HOST = process.env.HOST || '0.0.0.0';
+    app.listen(PORT, HOST, () => {
+      logger.info(`🚀 Server running on ${HOST}:${PORT}`);
       logger.info(`📊 Environment: ${envConfig.nodeEnv}`);
-      logger.info(`📚 Swagger API Docs: http://localhost:${PORT}/api-docs`);
+      logger.info(`📚 Swagger API Docs: http://${HOST}:${PORT}/api-docs`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
