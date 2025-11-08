@@ -1,17 +1,17 @@
 [providers]
-bun = "1.3"
+node = "18"
 
 [phases.setup]
-nixPkgs = ["bun"]
+nixPkgs = ["nodejs-18_x", "npm"]
 
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
-    "bun install"
+    "npm install"
 ]
 
 [phases.build]
 dependsOn = ["install"]
 
 [start]
-cmd = "bun run src/server.js"
+cmd = "npm start"
