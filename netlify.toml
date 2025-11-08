@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Note: Set VITE_API_URL in Netlify Dashboard > Site Settings > Environment Variables
+# Value: https://truco-game-admin-panel-production.up.railway.app/api
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
