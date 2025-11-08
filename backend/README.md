@@ -118,10 +118,36 @@ npm start    # Start production server
 
 ## Production Deployment
 
-1. Set `NODE_ENV=production` in `.env`
-2. Use a strong `JWT_SECRET`
-3. Configure proper database credentials
-4. Set up SSL/TLS
-5. Configure firewall rules
-6. Use process manager (PM2, etc.)
+### Railway Deployment
+
+1. **Set Environment Variables in Railway:**
+   ```env
+   NODE_ENV=production
+   PORT=3000
+   MONGODB_URI=your_production_mongodb_connection_string
+   JWT_SECRET=your_strong_secret_key_at_least_32_characters
+   JWT_EXPIRES_IN=7d
+   FRONTEND_URL=https://fluffy-naiad-0644a9.netlify.app
+   ```
+
+2. **Important Notes:**
+   - Set `NODE_ENV=production` - This ensures only your production frontend URL is allowed in CORS
+   - Set `FRONTEND_URL` to your Netlify deployment URL (or your production frontend URL)
+   - Use a strong `JWT_SECRET` (at least 32 characters)
+   - Use production MongoDB connection string (MongoDB Atlas recommended)
+
+3. **CORS Configuration:**
+   - In production, only the `FRONTEND_URL` environment variable will be allowed
+   - Localhost origins are automatically excluded when `NODE_ENV=production`
+   - Requests without origin are blocked in production for security
+
+### General Production Checklist
+
+1. Set `NODE_ENV=production`
+2. Use a strong `JWT_SECRET` (at least 32 characters)
+3. Configure proper database credentials (use MongoDB Atlas for production)
+4. Set `FRONTEND_URL` to your production frontend URL
+5. Set up SSL/TLS (Railway handles this automatically)
+6. Configure firewall rules (if needed)
+7. Use process manager (Railway handles this automatically)
 

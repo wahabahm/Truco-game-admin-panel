@@ -26,13 +26,62 @@ const envConfig = getEnvConfig();
 const app = express();
 const PORT = envConfig.port;
 
+// CORS configuration - allow multiple origins based on environment
+const getAllowedOrigins = () => {
+  const origins = new Set();
+  
+  // Always allow the configured frontend URL
+  if (envConfig.frontendUrl) {
+    origins.add(envConfig.frontendUrl);
+  }
+  
+  // In development, allow localhost with common ports
+  if (envConfig.nodeEnv === 'development') {
+    origins.add('http://localhost:8080');
+    origins.add('http://localhost:5173');
+    origins.add('http://localhost:3000');
+    origins.add('http://127.0.0.1:8080');
+    origins.add('http://127.0.0.1:5173');
+    origins.add('http://127.0.0.1:3000');
+  }
+  
+  return Array.from(origins);
+};
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: false // Disable CSP for Swagger UI
 }));
 app.use(cors({
-  origin: envConfig.frontendUrl,
-  credentials: true
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+    
+    // Allow requests with no origin only in development (for tools like Postman)
+    // In production, reject requests without origin for security
+    if (!origin) {
+      if (envConfig.nodeEnv === 'development') {
+        return callback(null, true);
+      } else {
+        logger.warn('CORS blocked: Request with no origin in production');
+        return callback(new Error('Not allowed by CORS'));
+      }
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // Log blocked origin (with details in development, minimal in production)
+      if (envConfig.nodeEnv === 'development') {
+        logger.warn(`CORS blocked origin: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
+      } else {
+        logger.warn(`CORS blocked origin: ${origin}`);
+      }
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(morgan('dev'));
 app.use(express.json());
@@ -110,6 +159,7 @@ const startServer = async () => {
     app.listen(PORT, HOST, () => {
       logger.info(`🚀 Server running on ${HOST}:${PORT}`);
       logger.info(`📊 Environment: ${envConfig.nodeEnv}`);
+      logger.info(`🌐 Allowed CORS origins: ${getAllowedOrigins().join(', ')}`);
       logger.info(`📚 Swagger API Docs: http://${HOST}:${PORT}/api-docs`);
     });
   } catch (error) {
