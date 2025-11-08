@@ -7,11 +7,14 @@ nixPkgs = ["bun"]
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
-    "bun install"
+    "cd backend && bun install || bun install"
 ]
 
 [phases.build]
 dependsOn = ["install"]
+cmds = [
+    "echo 'Build complete'"
+]
 
 [start]
-cmd = "bun run src/server.js"
+cmd = "cd backend && bun run src/server.js"
