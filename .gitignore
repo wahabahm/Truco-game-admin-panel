@@ -11,8 +11,8 @@ lerna-debug.log*
 .env
 .env.local
 .env.*.local
-.env.production
-.env.development
+# .env.production can be committed (no secrets, just config)
+# .env.development
 backend/.env
 backend/.env.local
 backend/.env.*.local

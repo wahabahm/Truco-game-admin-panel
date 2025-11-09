@@ -9,37 +9,26 @@ interface EnvConfig {
   PROD: boolean;
 }
 
-const requiredEnvVars = ['VITE_API_URL'] as const;
+// VITE_API_URL is optional - we have fallback URLs in the code
+// const requiredEnvVars = ['VITE_API_URL'] as const;
 
 export const validateEnv = (): void => {
-  const missing: string[] = [];
-
-  requiredEnvVars.forEach((key) => {
-    if (!import.meta.env[key]) {
-      missing.push(key);
-    }
-  });
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}\n` +
-      `Please check your .env file or environment configuration.`
-    );
-  }
+  // No longer required since we have fallback URLs
+  // This function is kept for future use if needed
 };
 
 export const getEnvConfig = (): EnvConfig => {
   return {
-    VITE_API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    VITE_API_URL: import.meta.env.VITE_API_URL || (import.meta.env.PROD
+      ? 'https://truco-game-admin-panel-production.up.railway.app/api'
+      : 'http://localhost:3000/api'),
     MODE: import.meta.env.MODE || 'development',
     DEV: import.meta.env.DEV,
     PROD: import.meta.env.PROD,
   };
 };
 
-// Validate on import (only in production)
-if (import.meta.env.PROD) {
-  validateEnv();
-}
+// Validation disabled since we have fallback URLs
+// VITE_API_URL will use Railway URL in production if not set via env variable
 
 

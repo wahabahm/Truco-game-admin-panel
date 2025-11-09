@@ -41,6 +41,19 @@ const getAllowedOrigins = () => {
     origins.add(envConfig.frontendUrl);
   }
   
+  // Allow multiple frontend URLs (comma-separated)
+  if (process.env.FRONTEND_URLS) {
+    process.env.FRONTEND_URLS.split(',').forEach(url => {
+      origins.add(url.trim());
+    });
+  }
+  
+  // Production: Add deployed frontend URLs
+  if (envConfig.nodeEnv === 'production') {
+    origins.add('https://truco-game-admin.netlify.app');
+    // Add other production frontend URLs here if needed
+  }
+  
   // In development, allow localhost with common ports
   if (envConfig.nodeEnv === 'development') {
     origins.add('http://localhost:8080');
