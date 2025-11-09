@@ -3,17 +3,12 @@
   "version": "1.0.0",
   "description": "Truco Admin Panel - Full Stack Application",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "scripts": {
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "install:all": "cd frontend && npm install && cd ../backend && npm install",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "build:frontend": "cd frontend && npm run build:prod",
-    "start:backend": "cd backend && npm start",
-    "deploy": "node deploy.js"
+    "start:backend": "cd backend && npm start"
   },
   "keywords": [
     "truco",

@@ -323,8 +323,6 @@ truco-admin-panel/
 │   ├── vite.config.ts     # Vite configuration
 │   ├── tsconfig.json      # TypeScript configuration
 │   └── tailwind.config.ts # Tailwind CSS configuration
-├── deploy.bat             # Windows deployment script
-├── deploy.sh              # Linux/Mac deployment script
 └── README.md              # Project documentation
 ```
 
