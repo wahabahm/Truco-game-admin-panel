@@ -36,15 +36,12 @@ const PORT = envConfig.port;
 const getAllowedOrigins = () => {
   const origins = new Set();
   
-  // Always add deployed Netlify frontend URL (works in all environments)
-  origins.add('https://truco-gam-admin.netlify.app');
-  
-  // Always allow the configured frontend URL
+  // Always allow the configured frontend URL from environment variable
   if (envConfig.frontendUrl) {
     origins.add(envConfig.frontendUrl);
   }
   
-  // Allow multiple frontend URLs (comma-separated)
+  // Allow multiple frontend URLs (comma-separated) from environment variable
   if (process.env.FRONTEND_URLS) {
     process.env.FRONTEND_URLS.split(',').forEach(url => {
       origins.add(url.trim());

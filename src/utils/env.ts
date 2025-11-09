@@ -19,9 +19,8 @@ export const validateEnv = (): void => {
 
 export const getEnvConfig = (): EnvConfig => {
   return {
-    VITE_API_URL: import.meta.env.VITE_API_URL || (import.meta.env.PROD
-      ? 'https://truco-game-admin-panel-production.up.railway.app/api'
-      : 'http://localhost:3000/api'),
+    // VITE_API_URL must be set in environment variables
+    VITE_API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
     MODE: import.meta.env.MODE || 'development',
     DEV: import.meta.env.DEV,
     PROD: import.meta.env.PROD,
@@ -29,6 +28,6 @@ export const getEnvConfig = (): EnvConfig => {
 };
 
 // Validation disabled since we have fallback URLs
-// VITE_API_URL will use Railway URL in production if not set via env variable
+// VITE_API_URL must be set via environment variables for production deployment
 
 
