@@ -541,7 +541,7 @@ const Tournaments = () => {
                                     <Badge variant={match.status === 'completed' ? 'secondary' : 'default'}>
                                       {match.status}
                                     </Badge>
-                                    {(match.status === 'pending' || match.status === 'active') && match.player1Id && match.player2Id && (
+                                    {match.status === 'pending' && match.player1Id && match.player2Id && (
                                       <Button
                                         size="sm"
                                         variant="outline"
