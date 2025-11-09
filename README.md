@@ -449,7 +449,7 @@ Authorization: Bearer <your-jwt-token>
    FRONTEND_URL=https://your-domain.com
    ```
 
-2. Use a process manager (PM2 recommended):
+2. Use a process manager:
    ```bash
    npm install -g pm2
    cd backend
