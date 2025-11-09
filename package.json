@@ -10,7 +10,8 @@
     "build:prod": "vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
-    "preview:prod": "vite preview --mode production"
+    "preview:prod": "vite preview --mode production",
+    "deploy:prepare": "npm run build:prod && xcopy /Y public\\.htaccess dist\\.htaccess && echo Build completed! Ready for deployment."
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

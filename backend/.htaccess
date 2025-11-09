@@ -1,0 +1,13 @@
+# Backend API - Redirect to Node.js if using Apache reverse proxy
+# This file is only needed if you're using Apache as reverse proxy for Node.js
+
+# If you're using Hostinger's Node.js app manager, you don't need this file
+# This is only for custom Apache configurations
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+</IfModule>
+
