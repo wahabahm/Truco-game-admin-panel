@@ -115,16 +115,3 @@ All collections are created automatically when first document is inserted.
 npm run dev  # Start with nodemon (auto-restart)
 npm start    # Start production server
 ```
-
-## Production Deployment
-
-### General Production Checklist
-
-1. Set `NODE_ENV=production`
-2. Use a strong `JWT_SECRET` (at least 32 characters)
-3. Configure proper database credentials (use MongoDB Atlas for production)
-4. Set `FRONTEND_URL` to your production frontend URL
-5. Set up SSL/TLS
-6. Configure firewall rules (if needed)
-7. Use process manager (PM2 recommended)
-
