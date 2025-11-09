@@ -415,32 +415,35 @@ Authorization: Bearer <your-jwt-token>
 
 ## 🚢 Production Deployment
 
+### Quick Start
+
+For quick deployment, see **[QUICK_DEPLOY.md](./QUICK_DEPLOY.md)**.
+
+For comprehensive deployment guide, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+
 ### Frontend Deployment
 
-1. Build the frontend:
+1. **Set environment variables:**
+   Create `.env.production` file:
+   ```env
+   VITE_API_URL=https://your-backend-api.com/api
+   ```
+
+2. **Build the frontend:**
    ```bash
    npm run build
    ```
 
-2. Serve the `dist` folder using a web server (Nginx, Apache, etc.)
-
-3. Configure the web server to serve the frontend:
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
-       root /path/to/truco-admin-panel/dist;
-       index index.html;
-       
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-   }
-   ```
+3. **Deploy to platform:**
+   - **Vercel:** `npm run deploy:vercel`
+   - **Netlify:** `npm run deploy:netlify`
+   - **Railway/Render:** Connect GitHub repo and deploy
+   - **VPS:** Upload `dist/` folder and configure web server
 
 ### Backend Deployment
 
-1. Set environment variables:
+1. **Set environment variables:**
+   Create `backend/.env` file:
    ```env
    NODE_ENV=production
    PORT=3000
@@ -449,31 +452,23 @@ Authorization: Bearer <your-jwt-token>
    FRONTEND_URL=https://your-domain.com
    ```
 
-2. Use a process manager:
-   ```bash
-   npm install -g pm2
-   cd backend
-   pm2 start src/server.js --name truco-api
-   pm2 save
-   pm2 startup
-   ```
+2. **Deploy to platform:**
+   - **Railway/Render:** Connect GitHub repo, set env vars, deploy
+   - **VPS with PM2:** `npm run start:pm2`
+   - **Docker:** `docker-compose up -d`
 
-3. Set up reverse proxy (Nginx):
-   ```nginx
-   server {
-       listen 80;
-       server_name api.your-domain.com;
-       
-       location / {
-           proxy_pass http://localhost:3000;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection 'upgrade';
-           proxy_set_header Host $host;
-           proxy_cache_bypass $http_upgrade;
-       }
-   }
-   ```
+### Deployment Checklist
+
+See **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** for complete pre-deployment checklist.
+
+### Supported Platforms
+
+- ✅ **Vercel** - Frontend & Backend (Serverless)
+- ✅ **Netlify** - Frontend
+- ✅ **Railway** - Frontend & Backend
+- ✅ **Render** - Frontend & Backend
+- ✅ **VPS/Server** - Frontend & Backend (Nginx + PM2)
+- ✅ **Docker** - Backend containerization
 
 ### Security Checklist
 
