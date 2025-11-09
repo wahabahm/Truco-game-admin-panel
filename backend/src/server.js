@@ -50,7 +50,7 @@ const getAllowedOrigins = () => {
   
   // Production: Add deployed frontend URLs
   if (envConfig.nodeEnv === 'production') {
-    origins.add('https://truco-game-admin.netlify.app');
+    origins.add('https://truco-gam-admin.netlify.app');
     // Add other production frontend URLs here if needed
   }
   
