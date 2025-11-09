@@ -10,9 +10,7 @@
     "build:prod": "vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
-    "preview:prod": "vite preview --mode production",
-    "deploy:vercel": "vercel --prod",
-    "deploy:netlify": "netlify deploy --prod"
+    "preview:prod": "vite preview --mode production"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
