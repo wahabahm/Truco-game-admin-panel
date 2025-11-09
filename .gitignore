@@ -16,6 +16,9 @@ lerna-debug.log*
 backend/.env
 backend/.env.local
 backend/.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
 
 # Package manager lock files
 bun.lockb
@@ -26,6 +29,14 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Frontend specific
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
 
 # Editor directories and files
 .vscode/*

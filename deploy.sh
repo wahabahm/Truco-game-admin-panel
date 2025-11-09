@@ -14,11 +14,14 @@ NC='\033[0m' # No Color
 
 # Step 1: Build Frontend
 echo -e "${YELLOW}Step 1: Building Frontend...${NC}"
+cd frontend
 npm run build:prod
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Frontend built successfully!${NC}"
+    cd ..
 else
     echo -e "${RED}✗ Frontend build failed!${NC}"
+    cd ..
     exit 1
 fi
 
@@ -33,11 +36,11 @@ else
     echo -e "${GREEN}✓ backend/.env file exists${NC}"
 fi
 
-if [ ! -f ".env.production" ]; then
-    echo -e "${YELLOW}⚠ .env.production file not found${NC}"
+if [ ! -f "frontend/.env.production" ]; then
+    echo -e "${YELLOW}⚠ frontend/.env.production file not found${NC}"
     echo "Creating .env.production from template..."
-    cp env.production.example .env.production
-    echo -e "${YELLOW}Please update .env.production with your API URL${NC}"
+    cp frontend/env.production.example frontend/.env.production
+    echo -e "${YELLOW}Please update frontend/.env.production with your API URL${NC}"
 fi
 
 # Step 3: Check Node.js version
@@ -55,13 +58,13 @@ fi
 echo ""
 echo -e "${YELLOW}Step 4: Creating deployment package...${NC}"
 echo "Files ready for deployment:"
-echo "  - dist/ folder (frontend)"
+echo "  - frontend/dist/ folder (frontend)"
 echo "  - backend/ folder (backend)"
 echo ""
 echo -e "${GREEN}✓ Deployment package ready!${NC}"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Upload dist/ folder contents to public_html/"
+echo "1. Upload frontend/dist/ folder contents to public_html/"
 echo "2. Upload backend/ folder to your server"
 echo "3. Install backend dependencies: cd backend && npm install --production"
 echo "4. Setup Node.js app in Hostinger hPanel"

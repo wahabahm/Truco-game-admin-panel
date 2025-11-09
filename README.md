@@ -115,7 +115,9 @@ cd truco-admin-panel
 ### 2. Install Frontend Dependencies
 
 ```bash
+cd frontend
 npm install
+cd ..
 ```
 
 ### 3. Install Backend Dependencies
@@ -130,10 +132,17 @@ cd ..
 
 #### Frontend Configuration
 
-Create a `.env` file in the root directory (if needed):
+Create a `.env.production` file in the `frontend/` directory:
+
+```bash
+cd frontend
+cp env.production.example .env.production
+```
+
+Edit the `.env.production` file:
 
 ```env
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3000/api
 ```
 
 #### Backend Configuration
@@ -219,6 +228,7 @@ The backend server will run on `http://localhost:3000`
 In a new terminal:
 
 ```bash
+cd frontend
 npm run dev
 ```
 
@@ -229,7 +239,8 @@ The frontend will run on `http://localhost:8080`
 #### Build Frontend
 
 ```bash
-npm run build
+cd frontend
+npm run build:prod
 ```
 
 #### Start Backend in Production
@@ -242,6 +253,7 @@ npm start
 #### Preview Production Build
 
 ```bash
+cd frontend
 npm run preview
 ```
 
@@ -278,38 +290,42 @@ truco-admin-panel/
 │   │   └── server.js       # Express server entry point
 │   ├── env.example         # Environment variables example
 │   └── package.json
-├── src/                    # Frontend source code
-│   ├── components/         # React components
-│   │   ├── dashboard/     # Dashboard components
-│   │   ├── layout/        # Layout components
-│   │   ├── ui/            # shadcn/ui components
-│   │   └── ...
-│   ├── context/           # React context providers
-│   │   ├── AuthContext.tsx
-│   │   └── ThemeContext.tsx
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # Utility functions
-│   ├── pages/             # Page components
-│   │   ├── Login.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── Users.tsx
-│   │   ├── Matches.tsx
-│   │   ├── Tournaments.tsx
-│   │   ├── Transactions.tsx
-│   │   ├── Live.tsx
-│   │   ├── Reports.tsx
-│   │   └── Alerts.tsx
-│   ├── services/          # API service functions
-│   │   ├── apiService.ts
-│   │   └── authService.ts
-│   ├── types/             # TypeScript type definitions
-│   ├── utils/             # Utility functions
-│   └── main.tsx           # Application entry point
-├── public/                # Static assets
-├── package.json
-├── vite.config.ts         # Vite configuration
-├── tsconfig.json          # TypeScript configuration
-└── tailwind.config.ts     # Tailwind CSS configuration
+├── frontend/               # Frontend React application
+│   ├── src/                # Frontend source code
+│   │   ├── components/     # React components
+│   │   │   ├── dashboard/ # Dashboard components
+│   │   │   ├── layout/    # Layout components
+│   │   │   ├── ui/        # shadcn/ui components
+│   │   │   └── ...
+│   │   ├── context/       # React context providers
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── ThemeContext.tsx
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── lib/           # Utility functions
+│   │   ├── pages/         # Page components
+│   │   │   ├── Login.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Users.tsx
+│   │   │   ├── Matches.tsx
+│   │   │   ├── Tournaments.tsx
+│   │   │   ├── Transactions.tsx
+│   │   │   ├── Live.tsx
+│   │   │   ├── Reports.tsx
+│   │   │   └── Alerts.tsx
+│   │   ├── services/      # API service functions
+│   │   │   ├── apiService.ts
+│   │   │   └── authService.ts
+│   │   ├── types/         # TypeScript type definitions
+│   │   ├── utils/         # Utility functions
+│   │   └── main.tsx       # Application entry point
+│   ├── public/            # Static assets
+│   ├── package.json
+│   ├── vite.config.ts     # Vite configuration
+│   ├── tsconfig.json      # TypeScript configuration
+│   └── tailwind.config.ts # Tailwind CSS configuration
+├── deploy.bat             # Windows deployment script
+├── deploy.sh              # Linux/Mac deployment script
+└── README.md              # Project documentation
 ```
 
 ## 📚 API Documentation
@@ -395,11 +411,14 @@ Authorization: Bearer <your-jwt-token>
 ### Available Scripts
 
 #### Frontend
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run build:dev` - Build in development mode
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+```bash
+cd frontend
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run build:prod   # Build in production mode
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+```
 
 #### Backend
 - `npm run dev` - Start development server with nodemon (auto-restart)
