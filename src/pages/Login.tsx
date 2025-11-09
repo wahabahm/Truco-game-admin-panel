@@ -25,7 +25,7 @@ const Login = () => {
         toast.success('Login successful!');
         navigate('/dashboard');
       } else {
-        toast.error('Invalid credentials. Try admin@truco.com / admin123');
+        toast.error('Invalid credentials');
       }
     } catch (error) {
       toast.error('An error occurred during login');
@@ -97,13 +97,15 @@ const Login = () => {
                 'Sign In'
               )}
             </Button>
-            <div className="text-xs text-center text-muted-foreground mt-4 p-4 bg-muted/30 rounded-xl border border-border/50">
-              <strong className="text-foreground">Demo credentials:</strong>
-              <div className="mt-2 space-y-1">
-                <div className="font-mono text-sm">admin@truco.com</div>
-                <div className="font-mono text-sm">admin123</div>
+            {import.meta.env.DEV && (
+              <div className="text-xs text-center text-muted-foreground mt-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+                <strong className="text-foreground">Demo credentials (dev only):</strong>
+                <div className="mt-2 space-y-1">
+                  <div className="font-mono text-sm">admin@truco.com</div>
+                  <div className="font-mono text-sm">admin123</div>
+                </div>
               </div>
-            </div>
+            )}
           </form>
         </CardContent>
       </Card>

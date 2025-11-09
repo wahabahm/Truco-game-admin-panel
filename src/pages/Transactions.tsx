@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, Coins, TrendingUp, TrendingDown, Receipt, Filter, X } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Coins, TrendingUp, TrendingDown, Receipt, Filter, X, Download } from 'lucide-react';
 import type { Transaction } from '@/types';
 import { logger } from '@/utils/logger';
+import { toast } from 'sonner';
+import { ERROR_MESSAGES } from '@/constants';
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -131,6 +134,19 @@ const Transactions = () => {
   const totalIncome = allTransactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = Math.abs(allTransactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
 
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      // Export with current filters applied
+      const typeToExport = filters.type !== 'all' ? filters.type : undefined;
+      await apiService.exportTransactions(format, undefined, typeToExport);
+      toast.success(`Transactions exported as ${format.toUpperCase()} successfully!`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to export transactions:', error);
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 md:p-8 lg:p-10 space-y-6">
@@ -200,6 +216,24 @@ const Transactions = () => {
                 className="pl-9 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-11">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('json')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}

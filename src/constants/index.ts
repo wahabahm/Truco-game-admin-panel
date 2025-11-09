@@ -4,8 +4,11 @@ export const API_CONFIG = {
   TIMEOUT: 30000, // 30 seconds
 } as const;
 
-// Default Admin Credentials
-export const DEFAULT_ADMIN = {
+// Note: Default admin credentials should NOT be hardcoded in production
+// These are only for development/testing purposes
+// In production, change the default admin password immediately after first deployment
+// Remove this constant or make it undefined in production builds
+export const DEFAULT_ADMIN = import.meta.env.PROD ? undefined : {
   EMAIL: 'admin@truco.com',
   PASSWORD: 'admin123',
 } as const;

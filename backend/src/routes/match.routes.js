@@ -104,6 +104,137 @@ router.get('/', async (req, res) => {
 
 /**
  * @swagger
+ * /api/matches/export:
+ *   get:
+ *     summary: Export matches (Admin only)
+ *     description: Export match history as CSV or JSON
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [csv, json]
+ *           default: csv
+ *         description: Export format
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, completed, cancelled]
+ *         description: Filter by status
+ *     responses:
+ *       200:
+ *         description: Match export file
+ *       403:
+ *         description: Admin access required
+ */
+/**
+ * Export matches (Admin only)
+ * Supports CSV and JSON formats
+ * NOTE: This route must come BEFORE /:id to avoid route conflicts
+ */
+router.get('/export', requireAdmin, async (req, res) => {
+  try {
+    const { format = 'csv', status } = req.query;
+
+    // Build query
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+
+    // Fetch matches with populated data
+    const matches = await Match.find(query)
+      .populate('player1Id', 'name email')
+      .populate('player2Id', 'name email')
+      .populate('winnerId', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (format === 'json') {
+      // JSON export
+      const exportData = matches.map(match => ({
+        id: match._id.toString(),
+        name: match.name,
+        type: match.type,
+        cost: match.cost,
+        prize: match.prize,
+        matchDate: match.matchDate || null,
+        status: match.status,
+        player1Id: match.player1Id?._id?.toString() || null,
+        player1Name: match.player1Id?.name || null,
+        player1Email: match.player1Id?.email || null,
+        player2Id: match.player2Id?._id?.toString() || null,
+        player2Name: match.player2Id?.name || null,
+        player2Email: match.player2Id?.email || null,
+        winnerId: match.winnerId?._id?.toString() || null,
+        winnerName: match.winnerId?.name || null,
+        completedAt: match.completedAt || null,
+        createdAt: match.createdAt,
+        updatedAt: match.updatedAt
+      }));
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=matches_${new Date().toISOString().split('T')[0]}.json`);
+      res.json({ matches: exportData });
+    } else {
+      // CSV export
+      const csvHeaders = [
+        'ID',
+        'Name',
+        'Type',
+        'Cost',
+        'Prize',
+        'Match Date',
+        'Status',
+        'Player 1',
+        'Player 1 Email',
+        'Player 2',
+        'Player 2 Email',
+        'Winner',
+        'Completed At',
+        'Created At'
+      ];
+
+      const csvRows = matches.map(match => {
+        return [
+          match._id.toString(),
+          `"${match.name || ''}"`,
+          match.type || '',
+          match.cost || 0,
+          match.prize || 0,
+          match.matchDate ? new Date(match.matchDate).toISOString() : '',
+          match.status || '',
+          match.player1Id?.name || '',
+          match.player1Id?.email || '',
+          match.player2Id?.name || '',
+          match.player2Id?.email || '',
+          match.winnerId?.name || '',
+          match.completedAt ? new Date(match.completedAt).toISOString() : '',
+          match.createdAt ? new Date(match.createdAt).toISOString() : ''
+        ].join(',');
+      });
+
+      const csvContent = [csvHeaders.join(','), ...csvRows].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=matches_${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csvContent);
+    }
+  } catch (error) {
+    logger.error('Export matches error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/matches/{id}:
  *   get:
  *     summary: Get single match by ID

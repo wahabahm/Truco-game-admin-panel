@@ -438,5 +438,111 @@ export const apiService = {
   getAdminLogs: async (): Promise<unknown[]> => {
     // TODO: Implement when admin logs API is ready
     return [];
-  }
+  },
+
+  // Export functions
+  exportTournaments: async (format: 'csv' | 'json' = 'csv', status?: string): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (status) {
+      params.append('status', status);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/tournaments/export?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Export failed');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `tournaments_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  exportMatches: async (format: 'csv' | 'json' = 'csv', status?: string): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (status) {
+      params.append('status', status);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/matches/export?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Export failed');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `matches_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  exportTransactions: async (format: 'csv' | 'json' = 'csv', userId?: string, type?: string): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (userId) {
+      params.append('userId', userId);
+    }
+    if (type) {
+      params.append('type', type);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/transactions/export?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Export failed');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `transactions_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
 };

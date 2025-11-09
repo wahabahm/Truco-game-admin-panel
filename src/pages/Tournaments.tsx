@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Calendar, Trophy, Users, XCircle, Eye, CheckCircle2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, Calendar, Trophy, Users, XCircle, Eye, CheckCircle2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tournament, CreateTournamentForm } from '@/types';
 import { logger } from '@/utils/logger';
@@ -164,6 +165,18 @@ const Tournaments = () => {
     return participant?.name || `User ${participantId}`;
   };
 
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      const statusToExport = filter === 'all' ? undefined : filter;
+      await apiService.exportTournaments(format, statusToExport);
+      toast.success(`Tournaments exported as ${format.toUpperCase()} successfully!`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to export tournaments:', error);
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 md:p-8 lg:p-10 space-y-6">
@@ -181,13 +194,32 @@ const Tournaments = () => {
               </p>
             </div>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Tournament
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-md hover:shadow-lg transition-all duration-200">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('json')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Tournament
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Tournament</DialogTitle>
@@ -285,6 +317,7 @@ const Tournaments = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Tabs value={filter} onValueChange={(value) => setFilter(value as typeof filter)} className="w-full">
@@ -508,7 +541,7 @@ const Tournaments = () => {
                                     <Badge variant={match.status === 'completed' ? 'secondary' : 'default'}>
                                       {match.status}
                                     </Badge>
-                                    {match.status === 'pending' && match.player1Id && match.player2Id && (
+                                    {(match.status === 'pending' || match.status === 'active') && match.player1Id && match.player2Id && (
                                       <Button
                                         size="sm"
                                         variant="outline"

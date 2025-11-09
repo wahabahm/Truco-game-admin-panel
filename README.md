@@ -2,8 +2,6 @@
 
 A comprehensive, full-stack admin panel for managing Truco card game tournaments, matches, players, transactions, and real-time game monitoring. Built with modern web technologies and best practices.
 
-> **Note**: Make sure to set `VITE_API_URL` environment variable in Netlify for production deployment.
-
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Private-red.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)

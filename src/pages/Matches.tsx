@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trophy, Calendar, CheckCircle2, Zap, Swords, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, Trophy, Calendar, CheckCircle2, Zap, Swords, BarChart3, TrendingUp, TrendingDown, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Match, User, CreateMatchForm } from '@/types';
 import { logger } from '@/utils/logger';
@@ -211,6 +212,18 @@ const Matches = () => {
     match.players < 2
   );
 
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      const statusToExport = filter === 'all' ? undefined : filter;
+      await apiService.exportMatches(format, statusToExport);
+      toast.success(`Matches exported as ${format.toUpperCase()} successfully!`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to export matches:', error);
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 md:p-8 lg:p-10 space-y-6">
@@ -229,6 +242,24 @@ const Matches = () => {
             </div>
           </div>
           <div className="flex gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-md hover:shadow-lg transition-all duration-200">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('json')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               onClick={handleAutoJoin}
               disabled={isAutoJoining || availableMatches.length === 0}

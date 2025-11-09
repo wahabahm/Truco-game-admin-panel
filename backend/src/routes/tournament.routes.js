@@ -103,6 +103,151 @@ router.get('/', async (req, res) => {
 
 /**
  * @swagger
+ * /api/tournaments/export:
+ *   get:
+ *     summary: Export tournaments (Admin only)
+ *     description: Export tournament history as CSV or JSON
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [csv, json]
+ *           default: csv
+ *         description: Export format
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [registration, active, completed, cancelled]
+ *         description: Filter by status
+ *     responses:
+ *       200:
+ *         description: Tournament export file
+ *       403:
+ *         description: Admin access required
+ */
+/**
+ * Export tournaments (Admin only)
+ * Supports CSV and JSON formats
+ * NOTE: This route must come BEFORE /:id to avoid route conflicts
+ */
+router.get('/export', requireAdmin, async (req, res) => {
+  try {
+    const { format = 'csv', status } = req.query;
+
+    // Build query
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+
+    // Fetch tournaments with populated data
+    const tournaments = await Tournament.find(query)
+      .populate('participants', 'name email')
+      .populate('winnerId', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (format === 'json') {
+      // JSON export
+      const exportData = tournaments.map(tournament => ({
+        id: tournament._id.toString(),
+        name: tournament.name,
+        type: tournament.type,
+        maxPlayers: tournament.maxPlayers,
+        entryCost: tournament.entryCost,
+        prizePool: tournament.prizePool,
+        awardPercentage: tournament.awardPercentage || 80,
+        startDate: tournament.startDate || null,
+        status: tournament.status,
+        participantCount: tournament.participants?.length || 0,
+        participants: tournament.participants?.map(p => ({
+          id: p._id?.toString() || p.toString(),
+          name: p.name || 'Unknown',
+          email: p.email || 'Unknown'
+        })) || [],
+        currentRound: tournament.currentRound,
+        winnerId: tournament.winnerId?._id?.toString() || tournament.winnerId?.toString() || null,
+        winnerName: tournament.winnerId?.name || null,
+        completedAt: tournament.completedAt || null,
+        cancelledAt: tournament.cancelledAt || null,
+        cancellationReason: tournament.cancellationReason || null,
+        createdAt: tournament.createdAt,
+        updatedAt: tournament.updatedAt
+      }));
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=tournaments_${new Date().toISOString().split('T')[0]}.json`);
+      res.json({ tournaments: exportData });
+    } else {
+      // CSV export
+      const csvHeaders = [
+        'ID',
+        'Name',
+        'Type',
+        'Max Players',
+        'Entry Cost',
+        'Prize Pool',
+        'Award Percentage',
+        'Start Date',
+        'Status',
+        'Participant Count',
+        'Participants',
+        'Current Round',
+        'Winner',
+        'Completed At',
+        'Cancelled At',
+        'Cancellation Reason',
+        'Created At'
+      ];
+
+      const csvRows = tournaments.map(tournament => {
+        const participants = tournament.participants?.map(p => 
+          `${p.name || 'Unknown'} (${p.email || 'N/A'})`
+        ).join('; ') || 'None';
+
+        return [
+          tournament._id.toString(),
+          `"${tournament.name || ''}"`,
+          tournament.type || '',
+          tournament.maxPlayers || 0,
+          tournament.entryCost || 0,
+          tournament.prizePool || 0,
+          tournament.awardPercentage || 80,
+          tournament.startDate ? new Date(tournament.startDate).toISOString() : '',
+          tournament.status || '',
+          tournament.participants?.length || 0,
+          `"${participants}"`,
+          tournament.currentRound || 0,
+          tournament.winnerId?.name || tournament.winnerId?.email || '',
+          tournament.completedAt ? new Date(tournament.completedAt).toISOString() : '',
+          tournament.cancelledAt ? new Date(tournament.cancelledAt).toISOString() : '',
+          `"${tournament.cancellationReason || ''}"`,
+          tournament.createdAt ? new Date(tournament.createdAt).toISOString() : ''
+        ].join(',');
+      });
+
+      const csvContent = [csvHeaders.join(','), ...csvRows].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=tournaments_${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csvContent);
+    }
+  } catch (error) {
+    logger.error('Export tournaments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/tournaments/{id}:
  *   get:
  *     summary: Get tournament by ID
@@ -603,6 +748,23 @@ router.post('/:id/record-match', requireAdmin, [
     }
 
     const match = round.matches[matchIndex];
+    
+    // Validate match is not already completed
+    if (match.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Match is already completed'
+      });
+    }
+    
+    // Validate players are in the match
+    if (match.player1Id?.toString() !== winnerId && match.player2Id?.toString() !== winnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Winner must be one of the players in this match'
+      });
+    }
+    
     match.winnerId = winnerId;
     match.status = 'completed';
 
