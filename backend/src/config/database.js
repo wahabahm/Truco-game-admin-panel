@@ -1,10 +1,17 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import User from '../models/User.js';
 import { logger } from '../utils/logger.js';
 
-dotenv.config();
+// Get current directory (ES module way)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from backend/.env file
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 export const connectDB = async () => {
   try {

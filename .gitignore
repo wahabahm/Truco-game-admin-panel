@@ -19,7 +19,6 @@ backend/.env.*.local
 
 # Package manager lock files
 bun.lockb
-!backend/bun.lockb
 # yarn.lock - uncomment if not using yarn
 # package-lock.json - committed for npm projects
 

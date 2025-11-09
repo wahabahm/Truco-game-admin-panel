@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { connectDB } from './config/database.js';
 import { swaggerSpec, swaggerUi } from './config/swagger.js';
 import { validateEnv, getEnvConfig } from './utils/env.js';
@@ -16,8 +18,12 @@ import dashboardRoutes from './routes/dashboard.routes.js';
 import alertRoutes from './routes/alert.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 
-// Load environment variables
-dotenv.config();
+// Get current directory (ES module way)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from backend/.env file
+dotenv.config({ path: join(__dirname, '../.env') });
 
 // Validate environment variables
 validateEnv();
