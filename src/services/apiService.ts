@@ -19,15 +19,12 @@ import type {
   UpdateUserData,
 } from '@/types';
 
-// API Base URL - Change this to your backend URL
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
-// Helper function to get auth token
 const getToken = () => {
   return localStorage.getItem(STORAGE_KEYS.TOKEN);
 };
 
-// Helper function for API requests
 const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const token = getToken();
   
@@ -41,14 +38,11 @@ const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = 
   }
 
   try {
-    // Use AbortSignal if provided in options
     const fetchOptions: RequestInit = {
       ...options,
       headers,
     };
     
-    // If signal is provided in options.body, we need to extract it
-    // Instead, we'll pass it through options directly
     if (options.signal) {
       fetchOptions.signal = options.signal;
     }
@@ -76,7 +70,6 @@ const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = 
 };
 
 export const apiService = {
-  // Users
   getUsers: async (search?: string, signal?: AbortSignal): Promise<User[]> => {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';
     const response = await apiRequest<{ users: User[] }>(`/users${params}`, {
@@ -109,7 +102,6 @@ export const apiService = {
     return response;
   },
   
-  // Matches
   getMatches: async (status?: string): Promise<Match[]> => {
     const params = status ? `?status=${status}` : '';
     const response = await apiRequest<{ matches: Match[] }>(`/matches${params}`);
@@ -154,7 +146,6 @@ export const apiService = {
     return response;
   },
   
-  // Tournaments
   getTournaments: async (status?: string): Promise<Tournament[]> => {
     const params = status ? `?status=${status}` : '';
     const response = await apiRequest<{ tournaments: Tournament[] }>(`/tournaments${params}`);
@@ -209,14 +200,12 @@ export const apiService = {
     return response;
   },
   
-  // Transactions
   getTransactions: async (userId?: string): Promise<Transaction[]> => {
     const params = userId ? `?userId=${userId}` : '';
     const response = await apiRequest<{ transactions: Transaction[] }>(`/transactions${params}`);
     return response.transactions || [];
   },
   
-  // Dashboard stats
   getDashboardStats: async (): Promise<DashboardStats> => {
     const response = await apiRequest<{ stats: DashboardStats }>('/dashboard/stats');
     return response.stats || {
@@ -230,7 +219,6 @@ export const apiService = {
     };
   },
   
-  // Economy stats
   getEconomyStats: async (): Promise<EconomyStats> => {
     const response = await apiRequest<{ economy: EconomyStats }>('/dashboard/economy');
     return response.economy || {
@@ -243,7 +231,6 @@ export const apiService = {
     };
   },
   
-  // Dashboard charts
   getUserGrowthData: async (): Promise<UserGrowthData[]> => {
     const response = await apiRequest<{ data: UserGrowthData[] }>('/dashboard/user-growth');
     return response.data || [];
@@ -260,7 +247,6 @@ export const apiService = {
     return response.activities || [];
   },
 
-  // Auth endpoints
   logout: async (): Promise<ApiResponse> => {
     const response = await apiRequest<ApiResponse>('/auth/logout', {
       method: 'POST',
@@ -274,19 +260,16 @@ export const apiService = {
     return response;
   },
 
-  // Match endpoints
   getMatch: async (id: string): Promise<Match> => {
     const response = await apiRequest<{ match: Match }>(`/matches/${id}`);
     return response.match;
   },
 
-  // User endpoints
   getUserStats: async (userId: string): Promise<Record<string, unknown>> => {
     const response = await apiRequest<{ stats: Record<string, unknown> }>(`/users/${userId}/stats`);
     return response.stats;
   },
 
-  // Tournament endpoints
   getTournamentPlayers: async (tournamentId: string): Promise<{ players: User[] }> => {
     const response = await apiRequest<{ players: User[] }>(`/tournaments/${tournamentId}/players`);
     return response;
@@ -300,7 +283,6 @@ export const apiService = {
     return response;
   },
 
-  // System status
   getSystemStatus: async (): Promise<Record<string, unknown>> => {
     const response = await apiRequest<{ status: Record<string, unknown> }>('/dashboard/system/status');
     return response.status;
