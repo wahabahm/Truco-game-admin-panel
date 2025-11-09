@@ -36,6 +36,9 @@ const PORT = envConfig.port;
 const getAllowedOrigins = () => {
   const origins = new Set();
   
+  // Always add deployed Netlify frontend URL (works in all environments)
+  origins.add('https://truco-gam-admin.netlify.app');
+  
   // Always allow the configured frontend URL
   if (envConfig.frontendUrl) {
     origins.add(envConfig.frontendUrl);
@@ -46,12 +49,6 @@ const getAllowedOrigins = () => {
     process.env.FRONTEND_URLS.split(',').forEach(url => {
       origins.add(url.trim());
     });
-  }
-  
-  // Production: Add deployed frontend URLs
-  if (envConfig.nodeEnv === 'production') {
-    origins.add('https://truco-gam-admin.netlify.app');
-    // Add other production frontend URLs here if needed
   }
   
   // In development, allow localhost with common ports
@@ -71,7 +68,8 @@ const getAllowedOrigins = () => {
 app.use(helmet({
   contentSecurityPolicy: false // Disable CSP for Swagger UI
 }));
-app.use(cors({
+// CORS configuration with proper preflight handling
+const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
     
@@ -89,19 +87,23 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Log blocked origin (with details in development, minimal in production)
-      if (envConfig.nodeEnv === 'development') {
-        logger.warn(`CORS blocked origin: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
-      } else {
-        logger.warn(`CORS blocked origin: ${origin}`);
-      }
-      callback(new Error('Not allowed by CORS'));
+      // Log blocked origin with allowed origins for debugging
+      logger.warn(`CORS blocked origin: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS requests for all routes (preflight)
+app.options('*', cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
