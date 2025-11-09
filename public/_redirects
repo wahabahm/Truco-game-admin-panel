@@ -1,6 +1,0 @@
-# Netlify SPA Routing
-# This file handles client-side routing for single-page applications
-# All routes should redirect to index.html so React Router can handle them
-
-/*    /index.html   200
-
