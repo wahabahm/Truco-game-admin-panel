@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Ban, CheckCircle, Coins, Plus, Minus, Trophy, TrendingDown, Users as UsersIcon } from 'lucide-react';
+import { Search, Ban, CheckCircle, Coins, Plus, Minus, Trophy, TrendingDown, Users as UsersIcon, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 import { logger } from '@/utils/logger';
@@ -19,9 +19,16 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [coinDialogOpen, setCoinDialogOpen] = useState<boolean>(false);
+  const [registerDialogOpen, setRegisterDialogOpen] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [coinAmount, setCoinAmount] = useState<string>('');
   const [coinOperation, setCoinOperation] = useState<'add' | 'remove'>('add');
+  const [registerForm, setRegisterForm] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -155,6 +162,45 @@ const Users = () => {
     }
   };
 
+  const handleRegisterUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registerForm.name || !registerForm.email || !registerForm.password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    if (registerForm.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const result = await apiService.registerUser(
+        registerForm.name,
+        registerForm.email,
+        registerForm.password
+      );
+      
+      if (result.success) {
+        toast.success('Player registered successfully!');
+        setRegisterDialogOpen(false);
+        setRegisterForm({ name: '', email: '', password: '' });
+        // Refresh users list
+        const data = await apiService.getUsers();
+        setUsers(Array.isArray(data) ? data : []);
+      } else {
+        toast.error(result.message || 'Failed to register player');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+      logger.error('Failed to register user:', error);
+      toast.error(errorMessage);
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 md:p-8 lg:p-10 space-y-6">
@@ -184,9 +230,99 @@ const Users = () => {
               className="pl-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 border-border/50 bg-background"
             />
           </div>
-          <Badge variant="outline" className="px-4 py-2 text-sm font-semibold border-primary/20 bg-primary/5">
-            {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="px-4 py-2 text-sm font-semibold border-primary/20 bg-primary/5">
+              {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+            </Badge>
+            <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Register Player
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl">Register New Player</DialogTitle>
+                  <DialogDescription className="text-base">
+                    Create a new player account. New players receive 100 coins by default.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleRegisterUser} className="space-y-5 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="registerName" className="text-sm font-semibold">Name</Label>
+                    <Input
+                      id="registerName"
+                      type="text"
+                      value={registerForm.name}
+                      onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                      placeholder="Enter player name"
+                      className="h-11"
+                      required
+                      minLength={2}
+                      maxLength={255}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="registerEmail" className="text-sm font-semibold">Email</Label>
+                    <Input
+                      id="registerEmail"
+                      type="email"
+                      value={registerForm.email}
+                      onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                      placeholder="Enter email address"
+                      className="h-11"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="registerPassword" className="text-sm font-semibold">Password</Label>
+                    <Input
+                      id="registerPassword"
+                      type="password"
+                      value={registerForm.password}
+                      onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                      placeholder="Enter password (min 6 characters)"
+                      className="h-11"
+                      required
+                      minLength={6}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Password must be at least 6 characters long
+                    </p>
+                  </div>
+                  <div className="flex gap-3 justify-end pt-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        setRegisterDialogOpen(false);
+                        setRegisterForm({ name: '', email: '', password: '' });
+                      }}
+                      className="px-6"
+                      disabled={isRegistering}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      className="px-6 bg-gradient-to-r from-primary to-primary/80"
+                      disabled={isRegistering}
+                    >
+                      {isRegistering ? (
+                        <>
+                          <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                          Registering...
+                        </>
+                      ) : (
+                        'Register Player'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">

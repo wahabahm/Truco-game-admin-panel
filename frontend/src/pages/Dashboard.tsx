@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Coins, LayoutDashboard } from 'lucide-react';
+import { Users, Coins, LayoutDashboard, TrendingUp, TrendingDown, Trophy, Swords } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { apiService } from '@/services/apiService';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -9,7 +9,10 @@ import type { DashboardStats } from '@/types';
 const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
-    totalCoins: 0
+    totalCoins: 0,
+    coinsIssued: 0,
+    coinsUsedInTournaments: 0,
+    coinsUsedInMatches: 0
   });
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -75,7 +78,7 @@ const Dashboard = () => {
         </div>
 
         {/* Primary Metrics Grid */}
-        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-4xl">
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl">
           <StatCard
             title="Total Players"
             value={stats.totalUsers.toLocaleString()}
@@ -89,6 +92,50 @@ const Dashboard = () => {
             icon={Coins}
             description="In circulation"
           />
+          <StatCard
+            title="Coins Issued"
+            value={(stats.coinsIssued || 0).toLocaleString()}
+            icon={TrendingUp}
+            description="Total coins ever issued"
+            variant="success"
+          />
+        </div>
+
+        {/* Economy Breakdown */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+              <Coins className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Economy Breakdown</h2>
+              <p className="text-sm text-muted-foreground">Detailed coin usage statistics</p>
+            </div>
+          </div>
+          
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl">
+            <StatCard
+              title="Used in Tournaments"
+              value={(stats.coinsUsedInTournaments || 0).toLocaleString()}
+              icon={Trophy}
+              description="Tournament entry fees"
+              variant="accent"
+            />
+            <StatCard
+              title="Used in Matches"
+              value={(stats.coinsUsedInMatches || 0).toLocaleString()}
+              icon={Swords}
+              description="Match entry fees"
+              variant="accent"
+            />
+            <StatCard
+              title="Total Used"
+              value={((stats.coinsUsedInTournaments || 0) + (stats.coinsUsedInMatches || 0)).toLocaleString()}
+              icon={TrendingDown}
+              description="Combined entry fees"
+              variant="secondary"
+            />
+          </div>
         </div>
       </div>
     </AppLayout>

@@ -92,6 +92,9 @@ export interface Transaction {
 export interface DashboardStats {
   totalUsers: number;
   totalCoins: number;
+  coinsIssued?: number;
+  coinsUsedInTournaments?: number;
+  coinsUsedInMatches?: number;
 }
 
 // API Response Types

@@ -203,7 +203,10 @@ export const apiService = {
     const response = await apiRequest<{ stats: DashboardStats }>('/dashboard/stats');
     return response.stats || {
       totalUsers: 0,
-      totalCoins: 0
+      totalCoins: 0,
+      coinsIssued: 0,
+      coinsUsedInTournaments: 0,
+      coinsUsedInMatches: 0
     };
   },
 
@@ -218,6 +221,25 @@ export const apiService = {
   checkAdmin: async (): Promise<ApiResponse<{ isAdmin: boolean }>> => {
     const response = await apiRequest<ApiResponse<{ isAdmin: boolean }>>('/auth/check-admin');
     return response;
+  },
+
+  registerUser: async (name: string, email: string, password: string): Promise<ApiResponse<User>> => {
+    // Registration endpoint returns { success, token, user } but we normalize it to ApiResponse format
+    const response = await apiRequest<{ success: boolean; token?: string; user?: User; message?: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    });
+    // Normalize response to ApiResponse format
+    if (response.success && response.user) {
+      return {
+        success: true,
+        data: response.user
+      };
+    }
+    return {
+      success: false,
+      message: response.message || 'Registration failed'
+    };
   },
 
   getMatch: async (id: string): Promise<Match> => {

@@ -11,7 +11,7 @@ interface StatCardProps {
     value: string;
     isPositive: boolean;
   };
-  variant?: 'default' | 'primary' | 'accent';
+  variant?: 'default' | 'primary' | 'accent' | 'success' | 'secondary';
   iconColor?: string;
 }
 
@@ -27,13 +27,17 @@ export const StatCard = ({
   const variantStyles = {
     default: 'border-border/50 bg-card/50 backdrop-blur-sm',
     primary: 'border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-primary/10',
-    accent: 'border-accent/30 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent shadow-accent/10'
+    accent: 'border-accent/30 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent shadow-accent/10',
+    success: 'border-success/30 bg-gradient-to-br from-success/10 via-success/5 to-transparent shadow-success/10',
+    secondary: 'border-muted/30 bg-gradient-to-br from-muted/10 via-muted/5 to-transparent'
   };
 
   const iconVariantStyles = {
     default: 'bg-muted/50 text-muted-foreground',
     primary: 'bg-primary/20 text-primary shadow-lg shadow-primary/20',
-    accent: 'bg-accent/20 text-accent shadow-lg shadow-accent/20'
+    accent: 'bg-accent/20 text-accent shadow-lg shadow-accent/20',
+    success: 'bg-success/20 text-success shadow-lg shadow-success/20',
+    secondary: 'bg-muted/20 text-muted-foreground shadow-lg'
   };
 
   return (
