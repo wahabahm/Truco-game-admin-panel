@@ -15,8 +15,6 @@ import matchRoutes from './routes/match.routes.js';
 import tournamentRoutes from './routes/tournament.routes.js';
 import transactionRoutes from './routes/transaction.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
-import alertRoutes from './routes/alert.routes.js';
-import adminRoutes from './routes/admin.routes.js';
 
 // Get current directory (ES module way)
 const __filename = fileURLToPath(import.meta.url);
@@ -123,8 +121,6 @@ app.get('/api', (req, res) => {
       tournaments: '/api/tournaments',
       transactions: '/api/transactions',
       dashboard: '/api/dashboard',
-      alerts: '/api/alerts',
-      admin: '/api/admin',
       docs: '/api-docs',
       health: '/health'
     },
@@ -148,8 +144,6 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/alerts', alertRoutes);
-app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

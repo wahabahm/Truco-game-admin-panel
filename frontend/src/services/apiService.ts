@@ -6,15 +6,8 @@ import type {
   Tournament,
   Transaction,
   DashboardStats,
-  UserGrowthData,
-  WeeklyActivityData,
-  RecentActivity,
-  Alert,
-  AlertSummary,
-  EconomyStats,
   CreateMatchForm,
   CreateTournamentForm,
-  CreateAlertForm,
   ApiResponse,
   UpdateUserData,
 } from '@/types';
@@ -210,41 +203,8 @@ export const apiService = {
     const response = await apiRequest<{ stats: DashboardStats }>('/dashboard/stats');
     return response.stats || {
       totalUsers: 0,
-      totalCoins: 0,
-      activePlayers: 0,
-      ongoingMatches: 0,
-      ongoingTournaments: 0,
-      completedMatches: 0,
-      completedTournaments: 0
+      totalCoins: 0
     };
-  },
-  
-  getEconomyStats: async (): Promise<EconomyStats> => {
-    const response = await apiRequest<{ economy: EconomyStats }>('/dashboard/economy');
-    return response.economy || {
-      totalCoinsInCirculation: 0,
-      totalCoinsIssued: 0,
-      coinsUsedInTournaments: 0,
-      coinsUsedInMatches: 0,
-      prizesDistributed: 0,
-      totalCoinsUsed: 0
-    };
-  },
-  
-  getUserGrowthData: async (): Promise<UserGrowthData[]> => {
-    const response = await apiRequest<{ data: UserGrowthData[] }>('/dashboard/user-growth');
-    return response.data || [];
-  },
-
-  getWeeklyActivityData: async (): Promise<WeeklyActivityData[]> => {
-    const response = await apiRequest<{ data: WeeklyActivityData[] }>('/dashboard/weekly-activity');
-    return response.data || [];
-  },
-
-  getRecentActivity: async (limit?: number): Promise<RecentActivity[]> => {
-    const params = limit ? `?limit=${limit}` : '';
-    const response = await apiRequest<{ activities: RecentActivity[] }>(`/dashboard/recent-activity${params}`);
-    return response.activities || [];
   },
 
   logout: async (): Promise<ApiResponse> => {
@@ -281,145 +241,6 @@ export const apiService = {
       body: JSON.stringify({ percentage }),
     });
     return response;
-  },
-
-  getSystemStatus: async (): Promise<Record<string, unknown>> => {
-    const response = await apiRequest<{ status: Record<string, unknown> }>('/dashboard/system/status');
-    return response.status;
-  },
-
-  // Alerts endpoints
-  createAlert: async (data: CreateAlertForm): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>('/alerts/create', {
-      method: 'POST',
-      body: JSON.stringify({
-        title: data.title,
-        message: data.message,
-        type: data.type || 'info',
-        severity: data.severity || 'medium',
-        relatedMatchId: data.relatedMatchId || null,
-        relatedTournamentId: data.relatedTournamentId || null,
-        relatedUserId: data.relatedUserId || null,
-        metadata: data.metadata || {}
-      }),
-    });
-    return response;
-  },
-
-  getAlerts: async (status?: string, type?: string, severity?: string): Promise<Alert[]> => {
-    const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (type) params.append('type', type);
-    if (severity) params.append('severity', severity);
-    const queryString = params.toString();
-    const response = await apiRequest<{ alerts: Alert[] }>(`/alerts${queryString ? `?${queryString}` : ''}`);
-    return response.alerts || [];
-  },
-
-  getAlert: async (id: string): Promise<Alert> => {
-    const response = await apiRequest<{ alert: Alert }>(`/alerts/${id}`);
-    return response.alert;
-  },
-
-  acknowledgeAlert: async (id: string): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>(`/alerts/${id}`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    return response;
-  },
-
-  resolveAlert: async (id: string): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>(`/alerts/${id}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    return response;
-  },
-
-  dismissAlert: async (id: string): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>(`/alerts/${id}/dismiss`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    return response;
-  },
-
-  getAlertsSummary: async (): Promise<AlertSummary> => {
-    const response = await apiRequest<{ summary: AlertSummary }>('/alerts/stats/summary');
-    return response.summary || {} as AlertSummary;
-  },
-
-  bulkAcknowledgeAlerts: async (alertIds: string[]): Promise<ApiResponse> => {
-    const response = await apiRequest<ApiResponse>('/alerts/bulk/acknowledge', {
-      method: 'POST',
-      body: JSON.stringify({ alertIds }),
-    });
-    return response;
-  },
-
-  // Admin alerts endpoints
-  getAdminAlertsDashboard: async (): Promise<Record<string, unknown>> => {
-    const response = await apiRequest<{ dashboard: Record<string, unknown> }>('/admin/alerts/dashboard');
-    return response.dashboard || {};
-  },
-
-  getAdminAlerts: async (status?: string, type?: string, severity?: string): Promise<Alert[]> => {
-    const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (type) params.append('type', type);
-    if (severity) params.append('severity', severity);
-    const queryString = params.toString();
-    const response = await apiRequest<{ alerts: Alert[] }>(`/admin/alerts${queryString ? `?${queryString}` : ''}`);
-    return response.alerts || [];
-  },
-
-  getAdminAlert: async (id: string): Promise<Alert> => {
-    const response = await apiRequest<{ alert: Alert }>(`/admin/alerts/${id}`);
-    return response.alert;
-  },
-
-  adminAcknowledgeAlert: async (id: string): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>(`/admin/alerts/${id}/acknowledge`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    return response;
-  },
-
-  adminResolveAlert: async (id: string): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>(`/admin/alerts/${id}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    return response;
-  },
-
-  adminDismissAlert: async (id: string): Promise<ApiResponse<Alert>> => {
-    const response = await apiRequest<ApiResponse<Alert>>(`/admin/alerts/${id}/dismiss`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    return response;
-  },
-
-  adminBulkAcknowledgeAlerts: async (alertIds: string[]): Promise<ApiResponse> => {
-    const response = await apiRequest<ApiResponse>('/admin/alerts/bulk/acknowledge', {
-      method: 'POST',
-      body: JSON.stringify({ alertIds }),
-    });
-    return response;
-  },
-
-  getAdminAlertsSummary: async (): Promise<AlertSummary> => {
-    const response = await apiRequest<{ summary: AlertSummary }>('/admin/alerts/stats/summary');
-    return response.summary || {} as AlertSummary;
-  },
-  
-  // Admin logs (for future)
-  getAdminLogs: async (): Promise<unknown[]> => {
-    // TODO: Implement when admin logs API is ready
-    return [];
   },
 
   // Export functions

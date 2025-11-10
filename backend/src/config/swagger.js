@@ -100,7 +100,7 @@ const options = {
             },
             status: {
               type: 'string',
-              enum: ['waiting', 'active', 'completed', 'cancelled'],
+              enum: ['active', 'completed', 'cancelled'],
               description: 'Match status'
             },
             player1Id: {
@@ -259,7 +259,7 @@ const options = {
             },
             type: {
               type: 'string',
-              enum: ['match_entry', 'match_win', 'match_loss', 'tournament_entry', 'tournament_win', 'admin_add', 'admin_remove'],
+              enum: ['match_entry', 'match_win', 'tournament_entry', 'tournament_win', 'coin_purchase', 'admin_add', 'admin_remove'],
               description: 'Transaction type'
             },
             amount: {
@@ -274,11 +274,6 @@ const options = {
               type: 'string',
               nullable: true,
               description: 'Related match ID (if applicable)'
-            },
-            tournamentId: {
-              type: 'string',
-              nullable: true,
-              description: 'Related tournament ID (if applicable)'
             },
             timestamp: {
               type: 'string',
@@ -321,43 +316,6 @@ const options = {
             }
           }
         },
-        Alert: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              description: 'Alert ID'
-            },
-            title: {
-              type: 'string',
-              description: 'Alert title'
-            },
-            message: {
-              type: 'string',
-              description: 'Alert message'
-            },
-            type: {
-              type: 'string',
-              enum: ['info', 'warning', 'error', 'success', 'system'],
-              description: 'Alert type'
-            },
-            severity: {
-              type: 'string',
-              enum: ['low', 'medium', 'high', 'critical'],
-              description: 'Alert severity'
-            },
-            status: {
-              type: 'string',
-              enum: ['active', 'acknowledged', 'resolved', 'dismissed'],
-              description: 'Alert status'
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Alert creation date'
-            }
-          }
-        }
       }
     },
     security: [

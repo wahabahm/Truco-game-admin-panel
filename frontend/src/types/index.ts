@@ -92,62 +92,6 @@ export interface Transaction {
 export interface DashboardStats {
   totalUsers: number;
   totalCoins: number;
-  activePlayers: number;
-  ongoingMatches: number;
-  ongoingTournaments: number;
-  completedMatches: number;
-  completedTournaments: number;
-}
-
-export interface UserGrowthData {
-  month: string;
-  users: number;
-  matches: number;
-  tournaments: number;
-}
-
-export interface WeeklyActivityData {
-  day: string;
-  active: number;
-  matches: number;
-}
-
-export interface RecentActivity {
-  id: string;
-  type: 'match' | 'tournament' | 'user' | 'transaction';
-  action: string;
-  user: string;
-  time: string;
-  status: string;
-}
-
-// Alert Types
-export interface Alert {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'error' | 'success' | 'system';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  status: 'active' | 'acknowledged' | 'resolved' | 'dismissed';
-  createdBy?: string;
-  createdByName?: string;
-  relatedMatchId?: string | null;
-  relatedTournamentId?: string | null;
-  relatedUserId?: string | null;
-  metadata?: Record<string, unknown>;
-  createdAt: string;
-  acknowledgedAt?: string;
-  resolvedAt?: string;
-}
-
-export interface AlertSummary {
-  total: number;
-  active: number;
-  acknowledged: number;
-  resolved: number;
-  dismissed: number;
-  byType: Record<string, number>;
-  bySeverity: Record<string, number>;
 }
 
 // API Response Types
@@ -182,17 +126,6 @@ export interface CreateTournamentForm {
   startDate: string | null;
 }
 
-export interface CreateAlertForm {
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'error' | 'success' | 'system';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  relatedMatchId?: string | null;
-  relatedTournamentId?: string | null;
-  relatedUserId?: string | null;
-  metadata?: Record<string, unknown>;
-}
-
 // User Update Types
 export interface UpdateUserData {
   name?: string;
@@ -203,15 +136,5 @@ export interface UpdateUserData {
 export interface UpdateUserCoinsData {
   amount: number;
   operation: 'add' | 'remove';
-}
-
-// Economy Stats
-export interface EconomyStats {
-  totalCoinsInCirculation: number;
-  totalCoinsIssued: number;
-  coinsUsedInTournaments: number;
-  coinsUsedInMatches: number;
-  prizesDistributed: number;
-  totalCoinsUsed: number;
 }
 

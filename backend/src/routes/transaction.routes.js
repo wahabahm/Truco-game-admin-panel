@@ -27,7 +27,7 @@ router.use(authenticate);
  *         name: type
  *         schema:
  *           type: string
- *           enum: [match_entry, match_win, match_loss, tournament_entry, tournament_win, admin_add, admin_remove]
+ *           enum: [match_entry, match_win, tournament_entry, tournament_win, coin_purchase, admin_add, admin_remove]
  *         description: Filter transactions by type
  *       - in: query
  *         name: limit
