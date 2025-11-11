@@ -643,7 +643,7 @@ router.post('/auto-join', async (req, res) => {
  * /api/matches/{id}/join:
  *   post:
  *     summary: Join a specific match
- *     description: Join a match by ID. Coins are automatically deducted. User must have sufficient coins.
+ *     description: Join a match by ID using the authenticated user. Coins are automatically deducted. User must have sufficient coins.
  *     tags: [Matches]
  *     security:
  *       - bearerAuth: []
@@ -654,18 +654,6 @@ router.post('/auto-join', async (req, res) => {
  *         schema:
  *           type: string
  *         description: Match ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
- *                 description: User ID to join the match
  *     responses:
  *       200:
  *         description: Successfully joined match
@@ -679,8 +667,6 @@ router.post('/auto-join', async (req, res) => {
  *                   example: true
  *                 message:
  *                   type: string
- *                 match:
- *                   $ref: '#/components/schemas/Match'
  *       400:
  *         description: Match full, insufficient coins, or validation error
  *         content:
@@ -694,22 +680,11 @@ router.post('/auto-join', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-// Join match
-router.post('/:id/join', [
-  body('userId').notEmpty().withMessage('Valid user ID is required')
-], async (req, res) => {
+// Join match (use authenticated user)
+router.post('/:id/join', async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: errors.array()
-      });
-    }
-
     const { id } = req.params;
-    const { userId } = req.body;
+    const userId = req.user.id; // Use authenticated user
 
     // Get match
     const match = await Match.findById(id);
@@ -760,17 +735,12 @@ router.post('/:id/join', [
       });
     }
 
-    // Join match
-    if (!match.player1Id) {
-      match.player1Id = userId;
-    } else {
-      match.player2Id = userId;
-    }
-    await match.save();
+    // Join match atomically
+    const updateField = !match.player1Id ? 'player1Id' : 'player2Id';
+    await Match.findByIdAndUpdate(id, { $set: { [updateField]: userId } });
 
-    // Deduct coins
-    user.coins -= match.cost;
-    await user.save();
+    // Deduct coins atomically
+    await User.findByIdAndUpdate(userId, { $inc: { coins: -match.cost } });
 
     // Log transaction
     await Transaction.create({
@@ -913,12 +883,11 @@ router.post('/:id/result', requireAdmin, [
     match.completedAt = new Date();
     await match.save();
 
-    // Update player stats
-    await User.findByIdAndUpdate(winnerId, { $inc: { wins: 1 } });
+    // Update player stats and award prize (combined operations for efficiency)
+    await User.findByIdAndUpdate(winnerId, { 
+      $inc: { wins: 1, coins: match.prize } 
+    });
     await User.findByIdAndUpdate(loserId, { $inc: { losses: 1 } });
-
-    // Award prize to winner
-    await User.findByIdAndUpdate(winnerId, { $inc: { coins: match.prize } });
 
     // Log transaction
     await Transaction.create({
