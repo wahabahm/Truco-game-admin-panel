@@ -1,6 +1,6 @@
 # Truco Admin Panel - Backend API
 
-Backend API server for Truco Admin Panel built with Node.js, Express, and PostgreSQL.
+Backend API server for Truco Admin Panel built with Node.js, Express, and MongoDB.
 
 ## Features
 
@@ -34,11 +34,7 @@ Edit `.env` file with your configuration:
 PORT=3000
 NODE_ENV=development
 
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=truco_game
-DB_USER=postgres
-DB_PASSWORD=your_password
+MONGODB_URI=mongodb://localhost:27017/truco_game
 
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 JWT_EXPIRES_IN=7d
@@ -57,7 +53,7 @@ FRONTEND_URL=http://localhost:8080
 npm run dev
 ```
 
-The server will automatically create all necessary tables on first run.
+The server will automatically create all necessary collections on first run.
 
 ## API Endpoints
 
@@ -107,7 +103,7 @@ All collections are created automatically when first document is inserted.
 - Input validation with express-validator
 - Helmet for security headers
 - CORS protection
-- SQL injection protection (parameterized queries)
+- MongoDB injection protection (Mongoose validation)
 
 ## Development
 
