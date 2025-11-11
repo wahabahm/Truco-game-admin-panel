@@ -222,25 +222,29 @@ const Matches = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border/60">
+      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+        {/* Game-themed header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/40 animate-fade-in">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-              <Swords className="h-6 w-6 text-white" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-accent/20 blur-xl rounded-2xl" />
+              <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-accent via-accent to-primary flex items-center justify-center shadow-2xl ring-2 ring-accent/30 transform hover:scale-110 transition-transform duration-300">
+                <Swords className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-                1v1 Matches
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-accent to-primary bg-clip-text text-transparent">
+                Battle Arena
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground">
-                Create and manage game matches, record results
+              <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
+                Create and manage 1v1 matches, record results
               </p>
             </div>
           </div>
           <div className="flex gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shadow-md hover:shadow-lg transition-all duration-200">
+                <Button variant="outline" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -267,7 +271,7 @@ const Matches = () => {
             </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+                <Button className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Match
                 </Button>
@@ -364,59 +368,59 @@ const Matches = () => {
 
         {/* Match Statistics Cards */}
         {!isLoading && (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in delay-200">
+            <Card className="border-border/60 bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Matches</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <CardTitle className="text-xs font-bold text-muted-foreground/80 uppercase tracking-wider">Total Matches</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/20 flex items-center justify-center shadow-lg">
                   <Swords className="h-5 w-5 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{matchStats.total}</div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <div className="text-4xl font-black">{matchStats.total}</div>
+                <p className="text-xs text-muted-foreground/70 mt-2 font-medium">
                   {matchStats.active} active, {matchStats.completed} completed
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-success/30 bg-success/5 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border-success/40 bg-gradient-to-br from-success/15 via-success/10 to-success/5 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-success">Prizes Distributed</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-success/20 flex items-center justify-center">
+                <CardTitle className="text-xs font-bold text-success uppercase tracking-wider">Prizes Distributed</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-success/30 to-success/20 flex items-center justify-center shadow-lg">
                   <TrendingUp className="h-5 w-5 text-success" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-success">{matchStats.totalPrizeDistributed.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-2">Avg: {matchStats.averagePrize} coins</p>
+                <div className="text-4xl font-black text-success">{matchStats.totalPrizeDistributed.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground/70 mt-2 font-medium">Avg: {matchStats.averagePrize} coins</p>
               </CardContent>
             </Card>
-            <Card className="border-destructive/30 bg-destructive/5 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border-destructive/40 bg-gradient-to-br from-destructive/15 via-destructive/10 to-destructive/5 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-destructive">Entry Fees Collected</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+                <CardTitle className="text-xs font-bold text-destructive uppercase tracking-wider">Entry Fees Collected</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-destructive/30 to-destructive/20 flex items-center justify-center shadow-lg">
                   <TrendingDown className="h-5 w-5 text-destructive" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-destructive">{matchStats.totalEntryFees.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-2">Avg cost: {matchStats.averageCost} coins</p>
+                <div className="text-4xl font-black text-destructive">{matchStats.totalEntryFees.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground/70 mt-2 font-medium">Avg cost: {matchStats.averageCost} coins</p>
               </CardContent>
             </Card>
-            <Card className="border-accent/30 bg-accent/5 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border-accent/40 bg-gradient-to-br from-accent/15 via-accent/10 to-accent/5 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-accent">Net Economy</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                <CardTitle className="text-xs font-bold text-accent uppercase tracking-wider">Net Economy</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-accent/30 to-accent/20 flex items-center justify-center shadow-lg">
                   <BarChart3 className="h-5 w-5 text-accent" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold ${
+                <div className={`text-4xl font-black ${
                   (matchStats.totalPrizeDistributed - matchStats.totalEntryFees) >= 0 ? 'text-success' : 'text-destructive'
                 }`}>
                   {(matchStats.totalPrizeDistributed - matchStats.totalEntryFees).toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Prizes - Entry fees</p>
+                <p className="text-xs text-muted-foreground/70 mt-2 font-medium">Prizes - Entry fees</p>
               </CardContent>
             </Card>
           </div>
@@ -426,8 +430,8 @@ const Matches = () => {
         {availableMatches.length > 0 && (
           <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-accent/5 border-2 border-primary/30 rounded-xl p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shadow-sm">
-                <Zap className="h-6 w-6 text-primary" />
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shadow-sm">
+                <Zap className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <div className="font-bold text-lg text-foreground mb-1">
@@ -484,7 +488,7 @@ const Matches = () => {
                 <TableRow>
                   <TableCell colSpan={filter === 'completed' ? 9 : 8} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
-                      <Swords className="h-12 w-12 text-muted-foreground/50" />
+                      <Swords className="h-10 w-10 text-muted-foreground/50" />
                       <div>
                         <p className="font-medium">No matches found</p>
                         <p className="text-sm text-muted-foreground mt-1">

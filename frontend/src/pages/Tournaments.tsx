@@ -179,17 +179,21 @@ const Tournaments = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border/60">
+      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+        {/* Game-themed header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/40 animate-fade-in">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-              <Trophy className="h-6 w-6 text-white" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-accent/20 blur-xl rounded-2xl" />
+              <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-accent via-accent to-primary flex items-center justify-center shadow-2xl ring-2 ring-accent/30 transform hover:scale-110 transition-transform duration-300">
+                <Trophy className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-                Tournaments
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-accent to-primary bg-clip-text text-transparent">
+                Championship Arena
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground">
+              <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
                 Create and manage tournaments (4 & 8 players)
               </p>
             </div>
@@ -197,7 +201,7 @@ const Tournaments = () => {
           <div className="flex gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shadow-md hover:shadow-lg transition-all duration-200">
+                <Button variant="outline" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -215,7 +219,7 @@ const Tournaments = () => {
             </DropdownMenu>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+                <Button className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Tournament
                 </Button>
@@ -358,7 +362,7 @@ const Tournaments = () => {
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
-                      <Trophy className="h-12 w-12 text-muted-foreground/50" />
+                      <Trophy className="h-10 w-10 text-muted-foreground/50" />
                       <div>
                         <p className="font-medium">No tournaments found</p>
                         <p className="text-sm text-muted-foreground mt-1">

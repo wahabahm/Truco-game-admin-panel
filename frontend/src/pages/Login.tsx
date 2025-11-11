@@ -35,22 +35,25 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Animated background gradients */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20"></div>
-      <div className="absolute top-0 -left-4 w-72 h-72 bg-primary/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-glow"></div>
-      <div className="absolute top-0 -right-4 w-72 h-72 bg-accent/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-glow animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-primary/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-glow animation-delay-4000"></div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-background">
+      {/* Game-themed background patterns */}
+      <div className="fixed inset-0 game-grid-bg opacity-20 -z-10" />
+      <div className="fixed inset-0 particle-bg -z-10" />
       
-      <Card className="w-full max-w-md relative z-10 shadow-2xl border-2 border-primary/30 bg-card/95 backdrop-blur-md animate-scale-in">
+      {/* Animated background gradients */}
+      <div className="absolute top-20 left-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse delay-500" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl animate-pulse delay-700" />
+      
+      <Card className="w-full max-w-md relative z-10 shadow-2xl border-2 border-primary/40 bg-card/95 backdrop-blur-md game-card animate-scale-in neon-border">
         <CardHeader className="space-y-1 flex flex-col items-center pb-8 pt-10">
           <div className="relative mb-2">
-            <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full animate-pulse"></div>
-            <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300 ring-4 ring-primary/20">
-              <Trophy className="h-10 w-10 text-white" />
+            <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full animate-pulse-glow"></div>
+            <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300 ring-4 ring-primary/30 float">
+              <Trophy className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mt-6 tracking-tight">
+          <CardTitle className="text-4xl font-black bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent mt-6 tracking-tight">
             Truco Admin Panel
           </CardTitle>
           <CardDescription className="text-center text-base mt-2 text-muted-foreground">
@@ -85,7 +88,7 @@ const Login = () => {
             </div>
             <Button 
               type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold text-base" 
+              className="w-full h-12 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-base neon-glow hover:scale-105" 
               disabled={isLoading}
             >
               {isLoading ? (

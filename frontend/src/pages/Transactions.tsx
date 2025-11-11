@@ -149,57 +149,61 @@ const Transactions = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-6">
-        <div className="flex items-center gap-4 pb-6 border-b border-border/60">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-            <Receipt className="h-6 w-6 text-white" />
+      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+        {/* Game-themed header */}
+        <div className="flex items-center gap-4 pb-6 border-b border-border/40 animate-fade-in">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl" />
+            <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-2 ring-primary/30 transform hover:scale-110 transition-transform duration-300">
+              <Receipt className="h-5 w-5 text-white" />
+            </div>
           </div>
-          <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              Transactions & Economy
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+              Economy Hub
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
               Complete transaction history and economy monitoring
             </p>
           </div>
         </div>
 
         {/* Economy Summary Cards */}
-        <div className="grid gap-5 md:grid-cols-3">
-          <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+        <div className="grid gap-6 md:grid-cols-3 animate-fade-in delay-200">
+          <Card className="border-border/60 bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Transactions</CardTitle>
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <CardTitle className="text-xs font-bold text-muted-foreground/80 uppercase tracking-wider">Total Transactions</CardTitle>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/20 flex items-center justify-center shadow-lg">
                 <Coins className="h-5 w-5 text-primary" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{totalTransactions}</div>
-              <p className="text-xs text-muted-foreground mt-2">All-time transactions</p>
+              <div className="text-4xl font-black">{totalTransactions}</div>
+              <p className="text-xs text-muted-foreground/70 mt-2 font-medium">All-time transactions</p>
             </CardContent>
           </Card>
-          <Card className="border-success/30 bg-success/5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border-success/40 bg-gradient-to-br from-success/15 via-success/10 to-success/5 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-success">Total Income</CardTitle>
-              <div className="h-10 w-10 rounded-lg bg-success/20 flex items-center justify-center">
+              <CardTitle className="text-xs font-bold text-success uppercase tracking-wider">Total Income</CardTitle>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-success/30 to-success/20 flex items-center justify-center shadow-lg">
                 <TrendingUp className="h-5 w-5 text-success" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-success">{totalIncome.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-2">Coins distributed</p>
+              <div className="text-4xl font-black text-success">{totalIncome.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground/70 mt-2 font-medium">Coins distributed</p>
             </CardContent>
           </Card>
-          <Card className="border-destructive/30 bg-destructive/5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border-destructive/40 bg-gradient-to-br from-destructive/15 via-destructive/10 to-destructive/5 backdrop-blur-md game-card hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-destructive">Total Expenses</CardTitle>
-              <div className="h-10 w-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+              <CardTitle className="text-xs font-bold text-destructive uppercase tracking-wider">Total Expenses</CardTitle>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-destructive/30 to-destructive/20 flex items-center justify-center shadow-lg">
                 <TrendingDown className="h-5 w-5 text-destructive" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-destructive">{totalExpenses.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-2">Entry fees collected</p>
+              <div className="text-4xl font-black text-destructive">{totalExpenses.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground/70 mt-2 font-medium">Entry fees collected</p>
             </CardContent>
           </Card>
         </div>
@@ -218,7 +222,7 @@ const Transactions = () => {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-11">
+                <Button variant="outline" className="h-11 shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -237,7 +241,7 @@ const Transactions = () => {
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className="h-11"
+              className="h-11 shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50"
             >
               <Filter className="h-4 w-4 mr-2" />
               Filters
@@ -246,7 +250,7 @@ const Transactions = () => {
               <Button
                 variant="ghost"
                 onClick={clearFilters}
-                className="h-11"
+                className="h-11 hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
               >
                 <X className="h-4 w-4 mr-2" />
                 Clear
@@ -256,10 +260,10 @@ const Transactions = () => {
 
           {/* Advanced Filters Panel */}
           {showFilters && (
-            <Card className="border-2 border-border/50 shadow-sm">
+            <Card className="border-2 border-border/50 shadow-xl bg-card/90 backdrop-blur-md game-card animate-fade-in">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Advanced Filters</CardTitle>
-                <CardDescription>Filter transactions by type, date range, and amount</CardDescription>
+                <CardTitle className="text-base font-bold">Advanced Filters</CardTitle>
+                <CardDescription className="text-muted-foreground/70">Filter transactions by type, date range, and amount</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -333,15 +337,15 @@ const Transactions = () => {
         </div>
 
         {/* Transactions Table */}
-        <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">
+        <div className="border-2 border-border/50 rounded-xl shadow-2xl overflow-hidden bg-card/90 backdrop-blur-md game-card animate-fade-in delay-300">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Timestamp</TableHead>
+              <TableRow className="bg-gradient-to-r from-muted/40 to-muted/20 hover:bg-muted/30 border-b border-border/50">
+                <TableHead className="font-bold text-foreground">User</TableHead>
+                <TableHead className="font-bold text-foreground">Type</TableHead>
+                <TableHead className="font-bold text-foreground">Amount</TableHead>
+                <TableHead className="font-bold text-foreground">Description</TableHead>
+                <TableHead className="font-bold text-foreground">Timestamp</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -350,7 +354,7 @@ const Transactions = () => {
                   <TableCell colSpan={5} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-muted-foreground">Loading transactions...</span>
+                      <span className="text-muted-foreground font-medium">Loading transactions...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -358,10 +362,10 @@ const Transactions = () => {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
-                      <Receipt className="h-12 w-12 text-muted-foreground/50" />
+                      <Receipt className="h-10 w-10 text-muted-foreground/50" />
                       <div>
-                        <p className="font-medium">No transactions found</p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="font-bold">No transactions found</p>
+                        <p className="text-sm text-muted-foreground/70 mt-1 font-medium">
                           {hasActiveFilters ? 'Try adjusting your filters' : 'No transactions recorded yet'}
                         </p>
                       </div>
@@ -370,7 +374,7 @@ const Transactions = () => {
                 </TableRow>
               ) : (
                 transactions.map((transaction: Transaction) => (
-                  <TableRow key={transaction.id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
+                  <TableRow key={transaction.id} className="hover:bg-primary/10 hover:shadow-md transition-all duration-300 border-b border-border/30 group">
                     <TableCell>
                       <div>
                         <div className="font-medium">{transaction.userName || `User ${transaction.userId}`}</div>
@@ -378,20 +382,20 @@ const Transactions = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getTypeColor(transaction.type)}>
+                      <Badge variant={getTypeColor(transaction.type)} className="font-semibold shadow-sm">
                         {getTypeLabel(transaction.type)}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className={`flex items-center gap-1 font-medium ${
+                      <div className={`flex items-center gap-2 font-bold text-lg ${
                         transaction.amount > 0 ? 'text-success' : 'text-destructive'
                       }`}>
                         {transaction.amount > 0 ? (
-                          <TrendingUp className="h-3.5 w-3.5" />
+                          <TrendingUp className="h-4 w-4" />
                         ) : (
-                          <TrendingDown className="h-3.5 w-3.5" />
+                          <TrendingDown className="h-4 w-4" />
                         )}
-                        {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()} coins
+                        <span>{transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()} coins</span>
                       </div>
                     </TableCell>
                     <TableCell className="max-w-md">{transaction.description || '-'}</TableCell>

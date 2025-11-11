@@ -203,17 +203,21 @@ const Users = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border/60">
+      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+        {/* Game-themed header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/40 animate-fade-in">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-              <UsersIcon className="h-6 w-6 text-white" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl" />
+              <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-2 ring-primary/30 transform hover:scale-110 transition-transform duration-300">
+                <UsersIcon className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-                Users Management
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+                Players Hub
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground">
+              <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
                 Manage registered players, stats, and coin balances
               </p>
             </div>
@@ -236,7 +240,7 @@ const Users = () => {
             </Badge>
             <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+                <Button className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold neon-glow hover:scale-105">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Register Player
                 </Button>
@@ -325,10 +329,10 @@ const Users = () => {
           </div>
         </div>
 
-        <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">
+        <div className="border-2 border-border/50 rounded-xl shadow-2xl overflow-hidden bg-card/90 backdrop-blur-md game-card animate-fade-in delay-200">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableRow className="bg-gradient-to-r from-muted/40 to-muted/20 hover:bg-muted/30 border-b border-border/50">
                 <TableHead className="font-semibold text-foreground">ID</TableHead>
                 <TableHead className="font-semibold text-foreground">Name</TableHead>
                 <TableHead className="font-semibold text-foreground">Email</TableHead>
@@ -370,7 +374,7 @@ const Users = () => {
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
+                  <TableRow key={user.id} className="hover:bg-primary/10 hover:shadow-md transition-all duration-300 border-b border-border/30 group">
                     <TableCell className="font-mono text-xs text-muted-foreground">{user.id.slice(0, 8)}...</TableCell>
                     <TableCell className="font-semibold text-foreground">{user.name}</TableCell>
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>

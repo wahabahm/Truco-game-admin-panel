@@ -47,8 +47,8 @@ export const AppSidebar = () => {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar-background/95 backdrop-blur-sm">
       <SidebarHeader className="border-b border-sidebar-border/50 p-4 bg-gradient-to-r from-sidebar-primary/10 to-transparent">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-sidebar-primary via-sidebar-primary to-accent flex items-center justify-center shadow-lg ring-2 ring-sidebar-primary/20">
-            <Trophy className="h-6 w-6 text-white" />
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sidebar-primary via-sidebar-primary to-accent flex items-center justify-center shadow-lg ring-2 ring-sidebar-primary/20">
+            <Trophy className="h-5 w-5 text-white" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
@@ -97,7 +97,7 @@ export const AppSidebar = () => {
       <SidebarFooter className="border-t border-sidebar-border/50 p-3 space-y-2 bg-sidebar-background/50">
         {!isCollapsed && user && (
           <div className="mb-3 px-3 py-2.5 rounded-lg bg-sidebar-accent/20 border border-sidebar-accent/20">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-sidebar-primary to-accent flex items-center justify-center text-xs font-bold text-white">
                 {user.name?.charAt(0).toUpperCase() || 'U'}
               </div>
@@ -113,7 +113,7 @@ export const AppSidebar = () => {
             variant="ghost"
             size={isCollapsed ? "icon" : "default"}
             onClick={handleLogout}
-            className={`${isCollapsed ? 'w-full' : 'w-full'} justify-start gap-2 text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive transition-all duration-200`}
+            className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive transition-all duration-200"
           >
             <LogOut className="h-4 w-4 flex-shrink-0" />
             {!isCollapsed && <span>Logout</span>}
