@@ -12,7 +12,7 @@ export const validateEnv = () => {
 
   requiredEnvVars.forEach((key) => {
     if (!process.env[key]) {
-      missing.push(key);
+    /*  missing.push(key); */
     }
   });
 

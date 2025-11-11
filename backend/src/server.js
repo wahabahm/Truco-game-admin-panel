@@ -95,10 +95,12 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-app.use(cors(corsOptions));
+// Allow all origins
+app.use(cors());
 
-// Explicitly handle OPTIONS requests for all routes (preflight)
-app.options('*', cors(corsOptions));
+// Optional: explicitly handle preflight OPTIONS requests for all routes
+app.options('*', cors());
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
