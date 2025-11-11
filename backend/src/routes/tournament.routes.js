@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import Tournament from '../models/Tournament.js';
 import User from '../models/User.js';
 import Match from '../models/Match.js';
@@ -550,88 +551,82 @@ router.post('/', requireAdmin, [
 /**
  * Join tournament
  * Validates sufficient coins and prevents duplicate registration
+ * Uses MongoDB transactions to prevent race conditions
  */
 router.post('/:id/join', async (req, res) => {
+  const session = await mongoose.startSession();
+  
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
+    await session.withTransaction(async () => {
+      const { id } = req.params;
+      const userId = req.user.id;
 
-    // Get tournament
-    const tournament = await Tournament.findById(id);
-    if (!tournament) {
-      return res.status(404).json({
-        success: false,
-        message: 'Tournament not found'
-      });
-    }
+      // Get tournament with session for transaction
+      const tournament = await Tournament.findById(id).session(session);
+      if (!tournament) {
+        throw new Error('Tournament not found');
+      }
 
-    // Validation: Check tournament status
-    if (tournament.status !== 'registration') {
-      return res.status(400).json({
-        success: false,
-        message: 'Tournament is not accepting registrations'
-      });
-    }
+      // Validation: Check tournament status
+      if (tournament.status !== 'registration') {
+        throw new Error('Tournament is not accepting registrations');
+      }
 
-    // Validation: Check if tournament is full
-    if (tournament.participants.length >= tournament.maxPlayers) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tournament is full'
-      });
-    }
+      // Validation: Check if tournament is full (atomic check)
+      if (tournament.participants.length >= tournament.maxPlayers) {
+        throw new Error('Tournament is full');
+      }
 
-    // Validation: Check if user is already registered
-    const userIdObj = typeof userId === 'string' ? userId : userId.toString();
-    if (tournament.participants.some(p => p.toString() === userIdObj)) {
-      return res.status(400).json({
-        success: false,
-        message: 'You are already registered for this tournament'
-      });
-    }
+      // Validation: Check if user is already registered
+      const userIdObj = typeof userId === 'string' ? userId : userId.toString();
+      if (tournament.participants.some(p => p.toString() === userIdObj)) {
+        throw new Error('You are already registered for this tournament');
+      }
 
-    // Validation: Check user has sufficient coins (server-side validation)
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+      // Validation: Check user has sufficient coins (server-side validation)
+      const user = await User.findById(userId).session(session);
+      if (!user) {
+        throw new Error('User not found');
+      }
 
-    if (user.coins < tournament.entryCost) {
-      return res.status(400).json({
-        success: false,
-        message: 'Insufficient coins'
-      });
-    }
+      if (user.coins < tournament.entryCost) {
+        throw new Error('Insufficient coins');
+      }
 
-    // Deduct coins (server-side to prevent manipulation)
-    user.coins -= tournament.entryCost;
-    await user.save();
+      // Deduct coins (atomic operation)
+      await User.findByIdAndUpdate(
+        userId,
+        { $inc: { coins: -tournament.entryCost } },
+        { session }
+      );
 
-    // Add user to tournament
-    tournament.participants.push(userId);
-    
-    // If tournament is now full, generate bracket and start
-    if (tournament.participants.length === tournament.maxPlayers) {
-      const bracket = generateBracket(tournament.maxPlayers, tournament.participants);
-      tournament.bracket = bracket;
-      tournament.status = 'active';
-      tournament.currentRound = 1;
-    }
+      // Add user to tournament (atomic operation)
+      tournament.participants.push(userId);
+      
+      // If tournament is now full, generate bracket and start
+      if (tournament.participants.length === tournament.maxPlayers) {
+        const bracket = generateBracket(tournament.maxPlayers, tournament.participants);
+        tournament.bracket = bracket;
+        tournament.status = 'active';
+        tournament.currentRound = 1;
+      }
 
-    await tournament.save();
+      await tournament.save({ session });
 
-    // Log transaction
-    await Transaction.create({
-      userId: user._id,
-      type: 'tournament_entry',
-      amount: -tournament.entryCost,
-      description: `Entry fee for tournament: ${tournament.name}`,
-      matchId: null
+      // Log transaction
+      await Transaction.create([{
+        userId: user._id,
+        type: 'tournament_entry',
+        amount: -tournament.entryCost,
+        description: `Entry fee for tournament: ${tournament.name}`,
+        matchId: null
+      }], { session });
     });
 
+    // After transaction, get updated tournament
+    const { id } = req.params;
+    const tournament = await Tournament.findById(id);
+    
     res.json({
       success: true,
       message: tournament.participants.length === tournament.maxPlayers 
@@ -645,10 +640,31 @@ router.post('/:id/join', async (req, res) => {
     });
   } catch (error) {
     logger.error('Join tournament error:', error);
+    const errorMessage = error.message || 'Server error';
+    
+    if (errorMessage === 'Tournament not found') {
+      return res.status(404).json({
+        success: false,
+        message: errorMessage
+      });
+    }
+    
+    if (errorMessage.includes('Tournament is full') || 
+        errorMessage.includes('already registered') ||
+        errorMessage.includes('Insufficient coins') ||
+        errorMessage.includes('not accepting registrations')) {
+      return res.status(400).json({
+        success: false,
+        message: errorMessage
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Server error'
     });
+  } finally {
+    await session.endSession();
   }
 });
 
@@ -737,10 +753,18 @@ router.post('/:id/record-match', requireAdmin, [
       });
     }
 
+    // Validate bracket exists
+    if (!tournament.bracket || !tournament.bracket.rounds || !Array.isArray(tournament.bracket.rounds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tournament bracket not initialized'
+      });
+    }
+
     // Update match result in bracket
     const bracket = tournament.bracket;
     const round = bracket.rounds.find(r => r.roundNumber === roundNumber);
-    if (!round || !round.matches[matchIndex]) {
+    if (!round || !round.matches || !round.matches[matchIndex]) {
       return res.status(400).json({
         success: false,
         message: 'Invalid round or match'
@@ -757,16 +781,33 @@ router.post('/:id/record-match', requireAdmin, [
       });
     }
     
-    // Validate players are in the match
-    if (match.player1Id?.toString() !== winnerId && match.player2Id?.toString() !== winnerId) {
+    // Validate players are in the match and both players exist
+    const player1IdStr = match.player1Id?.toString();
+    const player2IdStr = match.player2Id?.toString();
+    
+    if (!player1IdStr || !player2IdStr) {
+      return res.status(400).json({
+        success: false,
+        message: 'Match does not have both players assigned'
+      });
+    }
+    
+    if (player1IdStr !== winnerId && player2IdStr !== winnerId) {
       return res.status(400).json({
         success: false,
         message: 'Winner must be one of the players in this match'
       });
     }
+
+    // Determine loser
+    const loserId = player1IdStr === winnerId ? player2IdStr : player1IdStr;
     
     match.winnerId = winnerId;
     match.status = 'completed';
+
+    // Update player stats for this match
+    await User.findByIdAndUpdate(winnerId, { $inc: { wins: 1 } });
+    await User.findByIdAndUpdate(loserId, { $inc: { losses: 1 } });
 
     // Check if all matches in current round are completed
     const allMatchesCompleted = round.matches.every(m => m.status === 'completed');
@@ -779,6 +820,13 @@ router.post('/:id/record-match', requireAdmin, [
       if (roundNumber === bracket.totalRounds) {
         // Tournament completed
         const champion = winners[0];
+        if (!champion) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid tournament result: No champion found'
+          });
+        }
+        
         tournament.winnerId = champion;
         tournament.status = 'completed';
         tournament.completedAt = new Date();
@@ -788,7 +836,6 @@ router.post('/:id/record-match', requireAdmin, [
         const awardPercentage = tournament.awardPercentage || 80;
         const prizeAmount = Math.floor(tournament.prizePool * (awardPercentage / 100));
         await User.findByIdAndUpdate(champion, { $inc: { coins: prizeAmount } });
-        await User.findByIdAndUpdate(champion, { $inc: { wins: 1 } });
 
         // Log transaction
         await Transaction.create({
@@ -993,12 +1040,15 @@ router.post('/:id/cancel', requireAdmin, [
       });
     }
 
-    // Refund all participants
+    // Refund all participants (use atomic operations)
     for (const participantId of tournament.participants) {
       const user = await User.findById(participantId);
       if (user) {
-        user.coins += tournament.entryCost;
-        await user.save();
+        // Atomically refund coins
+        await User.findByIdAndUpdate(
+          participantId,
+          { $inc: { coins: tournament.entryCost } }
+        );
 
         // Log refund transaction
         await Transaction.create({
