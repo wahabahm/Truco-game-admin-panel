@@ -115,10 +115,10 @@ export const apiService = {
     return response;
   },
 
-  joinMatch: async (matchId: string, userId: string): Promise<ApiResponse<Match>> => {
+  joinMatch: async (matchId: string): Promise<ApiResponse<Match>> => {
     const response = await apiRequest<ApiResponse<Match>>(`/matches/${matchId}/join`, {
       method: 'POST',
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({}),
     });
     return response;
   },
