@@ -11,7 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables from backend/.env file
-dotenv.config({ path: join(__dirname, '../../.env') });
+// Note: server.js already loads this, but we load it here as well for safety
+dotenv.config({ path: join(__dirname, '../.env') });
 
 export const connectDB = async () => {
   try {
