@@ -163,15 +163,11 @@ const Matches = () => {
       );
 
       if (result.success) {
-        setMatches(matches.map(match =>
-          match.id === selectedMatch.id
-            ? { ...match, status: 'completed', winnerId: resultData.winnerId, completedAt: new Date().toISOString() }
-            : match
-        ));
         toast.success('Match result recorded successfully!');
         setIsResultDialogOpen(false);
         setSelectedMatch(null);
         setResultData({ winnerId: '', loserId: '' });
+        await refreshMatches(); // Refresh to get updated data from server
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
