@@ -519,32 +519,29 @@ router.patch('/:id/coins', requireAdmin, [
       });
     }
 
-    // Calculate new coins
-    let newCoins;
-    if (operation === 'add') {
-      newCoins = user.coins + amount;
-    } else {
-      newCoins = Math.max(0, user.coins - amount);
-    }
+    // Update coins atomically (prevents race conditions)
+    const coinChange = operation === 'add' ? amount : -Math.min(amount, user.coins);
+    const actualAmount = operation === 'add' ? amount : Math.min(amount, user.coins);
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $inc: { coins: coinChange } },
+      { new: true }
+    );
 
-    // Update coins
-    user.coins = newCoins;
-    await user.save();
-
-    // Log transaction
+    // Log transaction (log actual amount changed)
     await Transaction.create({
       userId: user._id,
       type: operation === 'add' ? 'admin_add' : 'admin_remove',
-      amount: operation === 'add' ? amount : -amount,
-      description: `Admin ${operation === 'add' ? 'added' : 'removed'} ${amount} coins`
+      amount: operation === 'add' ? actualAmount : -actualAmount,
+      description: `Admin ${operation === 'add' ? 'added' : 'removed'} ${actualAmount} coins`
     });
 
     res.json({
       success: true,
       message: `Coins ${operation === 'add' ? 'added' : 'removed'} successfully`,
       user: {
-        id: user._id.toString(),
-        coins: newCoins
+        id: updatedUser._id.toString(),
+        coins: updatedUser.coins
       }
     });
   } catch (error) {
