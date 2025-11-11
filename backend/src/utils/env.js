@@ -4,7 +4,8 @@
 
 const requiredEnvVars = [
   'MONGODB_URI',
-  'JWT_SECRET'
+  'JWT_SECRET',
+  'https://srv983121.hstgr.cloud'
 ];
 
 export const validateEnv = () => {
