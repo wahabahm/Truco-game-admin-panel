@@ -62,6 +62,32 @@ const Tournaments = () => {
 
   const handleCreateTournament = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    if (!formData.name.trim()) {
+      toast.error('Tournament name is required');
+      return;
+    }
+    
+    if (!formData.entryCost || parseInt(String(formData.entryCost), 10) <= 0) {
+      toast.error('Entry cost must be a positive number');
+      return;
+    }
+    
+    if (!formData.prizePool || parseInt(String(formData.prizePool), 10) <= 0) {
+      toast.error('Prize pool must be a positive number');
+      return;
+    }
+    
+    // Validate date if provided
+    if (formData.startDate) {
+      const startDate = new Date(formData.startDate);
+      if (isNaN(startDate.getTime())) {
+        toast.error('Invalid start date');
+        return;
+      }
+    }
+    
     try {
       const result = await apiService.createTournament(formData as CreateTournamentForm);
       if (result.success && result.data) {
@@ -77,6 +103,8 @@ const Tournaments = () => {
           // Refresh the list to show the newly created tournament
           fetchTournaments();
         }
+      } else {
+        toast.error(result.message || 'Failed to create tournament');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
@@ -104,6 +132,8 @@ const Tournaments = () => {
         toast.success('Tournament cancelled successfully.');
         setIsCancelDialogOpen(false);
         fetchTournaments();
+      } else {
+        toast.error(result.message || 'Failed to cancel tournament');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
@@ -291,11 +321,21 @@ const Tournaments = () => {
                     id="entryCost"
                     type="number"
                     min="1"
+                    step="1"
                     value={formData.entryCost}
-                    onChange={(e) => setFormData({ ...formData, entryCost: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow positive integers
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setFormData({ ...formData, entryCost: value });
+                      }
+                    }}
                     placeholder="Enter entry cost"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Whole numbers only (no decimals)
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="prizePool">Prize Pool (coins)</Label>
@@ -303,13 +343,20 @@ const Tournaments = () => {
                     id="prizePool"
                     type="number"
                     min="1"
+                    step="1"
                     value={formData.prizePool}
-                    onChange={(e) => setFormData({ ...formData, prizePool: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow positive integers
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setFormData({ ...formData, prizePool: value });
+                      }
+                    }}
                     placeholder="Enter prize pool"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Champion will receive 80% of prize pool
+                    Champion will receive 80% of prize pool (whole numbers only)
                   </p>
                 </div>
                 <div className="flex gap-2">

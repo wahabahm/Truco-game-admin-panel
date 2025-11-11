@@ -80,10 +80,18 @@ export const apiService = {
   },
 
   updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove'): Promise<ApiResponse<User>> => {
-    const response = await apiRequest<ApiResponse<User>>(`/users/${userId}/coins`, {
+    const response = await apiRequest<ApiResponse<User> & { user?: User }>(`/users/${userId}/coins`, {
       method: 'PATCH',
       body: JSON.stringify({ amount, operation }),
     });
+    // Normalize response: backend returns { success, user } but we expect { success, data }
+    if (response.success && (response as any).user) {
+      return {
+        success: response.success,
+        message: response.message,
+        data: (response as any).user
+      };
+    }
     return response;
   },
 

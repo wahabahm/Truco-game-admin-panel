@@ -119,6 +119,32 @@ const Matches = () => {
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    if (!formData.name.trim()) {
+      toast.error('Match name is required');
+      return;
+    }
+    
+    if (!formData.cost || parseInt(String(formData.cost), 10) <= 0) {
+      toast.error('Entry cost must be a positive number');
+      return;
+    }
+    
+    if (!formData.prize || parseInt(String(formData.prize), 10) <= 0) {
+      toast.error('Prize must be a positive number');
+      return;
+    }
+    
+    // Validate date if provided
+    if (formData.matchDate) {
+      const matchDate = new Date(formData.matchDate);
+      if (isNaN(matchDate.getTime())) {
+        toast.error('Invalid match date');
+        return;
+      }
+    }
+    
     try {
       const result = await apiService.createMatch(formData as CreateMatchForm);
       if (result.success) {
@@ -126,6 +152,8 @@ const Matches = () => {
         setIsCreateDialogOpen(false);
         setFormData({ name: '', type: 'public', cost: '', prize: '', matchDate: '' });
         await refreshMatches(); // Refresh to show new match
+      } else {
+        toast.error(result.message || 'Failed to create match');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
@@ -155,6 +183,23 @@ const Matches = () => {
       return;
     }
 
+    // Validate that winner and loser are different
+    if (resultData.winnerId === resultData.loserId) {
+      toast.error('Winner and loser must be different players');
+      return;
+    }
+
+    // Validate that both players are in the match
+    if (resultData.winnerId !== selectedMatch.player1Id && resultData.winnerId !== selectedMatch.player2Id) {
+      toast.error('Winner must be one of the players in this match');
+      return;
+    }
+
+    if (resultData.loserId !== selectedMatch.player1Id && resultData.loserId !== selectedMatch.player2Id) {
+      toast.error('Loser must be one of the players in this match');
+      return;
+    }
+
     try {
       const result = await apiService.recordMatchResult(
         selectedMatch.id,
@@ -168,6 +213,8 @@ const Matches = () => {
         setSelectedMatch(null);
         setResultData({ winnerId: '', loserId: '' });
         await refreshMatches(); // Refresh to get updated data from server
+      } else {
+        toast.error(result.message || 'Failed to record match result');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
@@ -328,11 +375,21 @@ const Matches = () => {
                     id="cost"
                     type="number"
                     min="1"
+                    step="1"
                     value={formData.cost}
-                    onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow positive integers
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setFormData({ ...formData, cost: value });
+                      }
+                    }}
                     placeholder="Enter entry cost"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Whole numbers only (no decimals)
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="prize">Prize (coins)</Label>
@@ -340,11 +397,21 @@ const Matches = () => {
                     id="prize"
                     type="number"
                     min="1"
+                    step="1"
                     value={formData.prize}
-                    onChange={(e) => setFormData({ ...formData, prize: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow positive integers
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setFormData({ ...formData, prize: value });
+                      }
+                    }}
                     placeholder="Enter prize amount"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Whole numbers only (no decimals)
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsCreateDialogOpen(false)}>

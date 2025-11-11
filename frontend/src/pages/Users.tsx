@@ -129,17 +129,24 @@ const Users = () => {
 
   const handleCoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !coinAmount || parseFloat(coinAmount) <= 0) {
-      toast.error('Please enter a valid amount');
+    if (!selectedUser || !coinAmount) {
+      toast.error('Please enter an amount');
+      return;
+    }
+
+    // Validate and parse as integer (coins must be whole numbers)
+    const amount = parseInt(coinAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid positive whole number');
       return;
     }
 
     try {
-      const amount = parseFloat(coinAmount);
       const result = await apiService.updateUserCoins(selectedUser.id, amount, coinOperation);
       
-      if (result.success && result.data) {
-        const updatedUser = result.data as User;
+      // Backend returns { success, user } but we normalize to { success, data }
+      const updatedUser = (result.data || (result as any).user) as User;
+      if (result.success && updatedUser) {
         // Update user coins in local state
         setUsers(users.map(user =>
           user.id === selectedUser.id 
@@ -503,12 +510,22 @@ const Users = () => {
                   id="coinAmount"
                   type="number"
                   min="1"
+                  step="1"
                   value={coinAmount}
-                  onChange={(e) => setCoinAmount(e.target.value)}
-                  placeholder="Enter coin amount"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Only allow positive integers
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setCoinAmount(value);
+                    }
+                  }}
+                  placeholder="Enter coin amount (whole number only)"
                   className="h-11"
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Coins must be whole numbers (no decimals)
+                </p>
               </div>
               {selectedUser && coinAmount && (
                 <div className={`p-4 rounded-lg border-2 ${
@@ -520,10 +537,12 @@ const Users = () => {
                   <div className={`text-2xl font-bold ${
                     coinOperation === 'add' ? 'text-success' : 'text-destructive'
                   }`}>
-                    {coinOperation === 'add' 
-                      ? selectedUser.coins + (parseFloat(coinAmount) || 0)
-                      : Math.max(0, selectedUser.coins - (parseFloat(coinAmount) || 0))
-                    } coins
+                    {(() => {
+                      const amount = parseInt(coinAmount, 10) || 0;
+                      return coinOperation === 'add' 
+                        ? selectedUser.coins + amount
+                        : Math.max(0, selectedUser.coins - amount);
+                    })()} coins
                   </div>
                 </div>
               )}
