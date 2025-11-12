@@ -43,7 +43,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="p-6 md:p-8 lg:p-10 space-y-8">
+        <div className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 sm:space-y-8">
           <div className="flex items-center justify-center min-h-[500px]">
             <div className="text-center space-y-4">
               <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -57,7 +57,7 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="relative p-6 md:p-8 lg:p-10 space-y-10 bg-background w-full particle-bg">
+      <div className="relative p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 sm:space-y-8 md:space-y-10 bg-background w-full particle-bg">
         {/* Animated background elements */}
         <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -71,15 +71,15 @@ const Dashboard = () => {
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-3xl animate-pulse-glow" />
-                <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-4 ring-primary/20 transform hover:scale-110 transition-transform duration-300 float">
-                  <LayoutDashboard className="h-6 w-6 text-white" />
+                <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-4 ring-primary/20 transform hover:scale-110 transition-transform duration-300 float">
+                  <LayoutDashboard className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
               <div>
-                <h1 className="text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
                   Game Control Center
                 </h1>
-                <p className="text-base text-muted-foreground/80 mt-2 font-medium">
+                <p className="text-sm sm:text-base text-muted-foreground/80 mt-2 font-medium">
                   Real-time platform statistics & analytics
                 </p>
               </div>
@@ -128,10 +128,10 @@ const Dashboard = () => {
               </div>
             </div>
             <div>
-              <h2 className="text-3xl font-black tracking-tight bg-gradient-to-r from-foreground to-accent bg-clip-text text-transparent">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-foreground to-accent bg-clip-text text-transparent">
                 Economy Breakdown
               </h2>
-              <p className="text-sm text-muted-foreground/70 mt-1 font-medium">Detailed coin usage & transaction statistics</p>
+              <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 font-medium">Detailed coin usage & transaction statistics</p>
             </div>
           </div>
           

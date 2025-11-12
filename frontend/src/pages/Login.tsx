@@ -49,14 +49,14 @@ const Login = () => {
         <CardHeader className="space-y-1 flex flex-col items-center pb-8 pt-10">
           <div className="relative mb-2">
             <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full animate-pulse-glow"></div>
-            <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300 ring-4 ring-primary/30 float">
-              <Trophy className="h-8 w-8 text-white" />
+            <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300 ring-4 ring-primary/30 float">
+              <Trophy className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-4xl font-black bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent mt-6 tracking-tight">
+          <CardTitle className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent mt-6 tracking-tight">
             Truco Admin Panel
           </CardTitle>
-          <CardDescription className="text-center text-base mt-2 text-muted-foreground">
+          <CardDescription className="text-center text-sm sm:text-base mt-2 text-muted-foreground">
             Enter your credentials to access the admin dashboard
           </CardDescription>
         </CardHeader>
@@ -70,7 +70,8 @@ const Login = () => {
                 placeholder="admin@truco.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
+                autoComplete="email"
                 required
               />
             </div>
@@ -82,13 +83,14 @@ const Login = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
+                autoComplete="current-password"
                 required
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-base neon-glow hover:scale-105" 
+              className="w-full h-11 sm:h-12 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-sm sm:text-base neon-glow hover:scale-105" 
               disabled={isLoading}
             >
               {isLoading ? (

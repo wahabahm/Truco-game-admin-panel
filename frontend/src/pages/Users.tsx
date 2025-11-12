@@ -210,21 +210,21 @@ const Users = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+      <div className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 sm:space-y-8 relative">
         {/* Game-themed header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/40 animate-fade-in">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl" />
-              <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-2 ring-primary/30 transform hover:scale-110 transition-transform duration-300">
-                <UsersIcon className="h-5 w-5 text-white" />
+              <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-2 ring-primary/30 transform hover:scale-110 transition-transform duration-300">
+                <UsersIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
             </div>
             <div className="space-y-2">
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
                 Players Hub
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground/80 font-medium">
                 Manage registered players, stats, and coin balances
               </p>
             </div>
@@ -238,18 +238,19 @@ const Users = () => {
               placeholder="Search by name, email, or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 border-border/50 bg-background"
+              className="pl-10 h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 border-border/50 bg-background text-sm"
             />
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="px-4 py-2 text-sm font-semibold border-primary/20 bg-primary/5">
+            <Badge variant="outline" className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border-primary/20 bg-primary/5">
               {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
             </Badge>
             <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold neon-glow hover:scale-105">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Register Player
+                <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold neon-glow hover:scale-105 text-xs sm:text-sm">
+                  <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Register Player</span>
+                  <span className="sm:hidden">Register</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">

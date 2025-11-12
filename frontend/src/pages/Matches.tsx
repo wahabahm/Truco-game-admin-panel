@@ -269,31 +269,31 @@ const Matches = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+      <div className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 sm:space-y-8 relative">
         {/* Game-themed header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/40 animate-fade-in">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="absolute inset-0 bg-accent/20 blur-xl rounded-2xl" />
-              <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-accent via-accent to-primary flex items-center justify-center shadow-2xl ring-2 ring-accent/30 transform hover:scale-110 transition-transform duration-300">
-                <Swords className="h-5 w-5 text-white" />
+              <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-accent via-accent to-primary flex items-center justify-center shadow-2xl ring-2 ring-accent/30 transform hover:scale-110 transition-transform duration-300">
+                <Swords className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
             </div>
             <div className="space-y-2">
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-accent to-primary bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-accent to-primary bg-clip-text text-transparent">
                 Battle Arena
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground/80 font-medium">
                 Create and manage 1v1 matches, record results
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
+                <Button variant="outline" size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50 text-xs sm:text-sm">
+                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -310,17 +310,20 @@ const Matches = () => {
             <Button
               onClick={handleAutoJoin}
               disabled={isAutoJoining || availableMatches.length === 0}
-              className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+              size="sm"
+              className="shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 text-xs sm:text-sm"
               title={availableMatches.length === 0 ? 'No available matches' : 'Quick join an available match'}
             >
-              <Zap className="h-4 w-4 mr-2" />
-              {isAutoJoining ? 'Joining...' : 'Quick Join'}
+              <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              <span className="hidden sm:inline">{isAutoJoining ? 'Joining...' : 'Quick Join'}</span>
+              <span className="sm:hidden">{isAutoJoining ? '...' : 'Join'}</span>
             </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Match
+                <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105 text-xs sm:text-sm">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Create Match</span>
+                  <span className="sm:hidden">Create</span>
                 </Button>
               </DialogTrigger>
             <DialogContent className="max-w-md">

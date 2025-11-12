@@ -78,17 +78,17 @@ export const StatCard = ({
           {title}
         </CardTitle>
         <div className={cn(
-          "h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:shadow-2xl relative",
+          "h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:shadow-2xl relative",
           iconVariantStyles[variant],
           iconColor && `bg-[${iconColor}]/20 text-[${iconColor}]`
         )}>
           <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <Icon className="h-5 w-5 relative z-10" />
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 relative z-10" />
         </div>
       </CardHeader>
       
       <CardContent className="space-y-3 relative z-10">
-        <div className="text-5xl font-black tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/80 bg-clip-text text-transparent">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/80 bg-clip-text text-transparent">
           {value}
         </div>
         {description && (

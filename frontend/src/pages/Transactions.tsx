@@ -149,20 +149,20 @@ const Transactions = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 lg:p-10 space-y-8 relative">
+      <div className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 sm:space-y-8 relative">
         {/* Game-themed header */}
         <div className="flex items-center gap-4 pb-6 border-b border-border/40 animate-fade-in">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl" />
-            <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-2 ring-primary/30 transform hover:scale-110 transition-transform duration-300">
-              <Receipt className="h-5 w-5 text-white" />
+            <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl ring-2 ring-primary/30 transform hover:scale-110 transition-transform duration-300">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
               Economy Hub
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground/80 font-medium">
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground/80 font-medium">
               Complete transaction history and economy monitoring
             </p>
           </div>

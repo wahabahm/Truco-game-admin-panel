@@ -4,7 +4,8 @@ import {
   Swords,
   Trophy,
   Receipt,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -16,7 +17,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   SidebarHeader,
   SidebarFooter,
   useSidebar
@@ -33,28 +33,51 @@ const menuItems = [
 ];
 
 export const AppSidebar = () => {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const isCollapsed = state === 'collapsed';
 
   const handleLogout = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
     logout();
     navigate('/');
+  };
+
+  const handleNavClick = () => {
+    // Close mobile sidebar when navigating
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar-background/95 backdrop-blur-sm">
       <SidebarHeader className="border-b border-sidebar-border/50 p-4 bg-gradient-to-r from-sidebar-primary/10 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sidebar-primary via-sidebar-primary to-accent flex items-center justify-center shadow-lg ring-2 ring-sidebar-primary/20">
-            <Trophy className="h-5 w-5 text-white" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-sidebar-foreground text-lg tracking-tight">Truco Admin</span>
-              <span className="text-xs text-sidebar-foreground/60 font-medium">Game Management</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sidebar-primary via-sidebar-primary to-accent flex items-center justify-center shadow-lg ring-2 ring-sidebar-primary/20">
+              <Trophy className="h-5 w-5 text-white" />
             </div>
+            {!isCollapsed && (
+              <div className="flex flex-col">
+                <span className="font-bold text-sidebar-foreground text-lg tracking-tight">Truco Admin</span>
+                <span className="text-xs text-sidebar-foreground/60 font-medium">Game Management</span>
+              </div>
+            )}
+          </div>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg hover:bg-sidebar-accent/40"
+              onClick={() => setOpenMobile(false)}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close menu</span>
+            </Button>
           )}
         </div>
       </SidebarHeader>
@@ -71,6 +94,7 @@ export const AppSidebar = () => {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
+                      onClick={handleNavClick}
                       className={({ isActive }) => {
                         const baseClasses = "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group";
                         const activeClasses = isActive
@@ -120,8 +144,6 @@ export const AppSidebar = () => {
           </Button>
         </div>
       </SidebarFooter>
-
-      <SidebarTrigger className="absolute -right-3 top-4 z-10 h-8 w-8 rounded-full border-2 border-sidebar-border bg-sidebar-background shadow-lg hover:bg-sidebar-accent/20 transition-colors" />
     </Sidebar>
   );
 };
