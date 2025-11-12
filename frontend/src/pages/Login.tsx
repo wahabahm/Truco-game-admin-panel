@@ -67,7 +67,7 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@truco.com"
+                // placeholder="admin@truco.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
@@ -80,7 +80,7 @@ const Login = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                // placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
@@ -106,8 +106,8 @@ const Login = () => {
               <div className="text-xs text-center text-muted-foreground mt-4 p-4 bg-muted/30 rounded-xl border border-border/50">
                 <strong className="text-foreground">Demo credentials (dev only):</strong>
                 <div className="mt-2 space-y-1">
-                  <div className="font-mono text-sm">admin@truco.com</div>
-                  <div className="font-mono text-sm">admin123</div>
+                  <div className="font-mono text-sm"></div>
+                  <div className="font-mono text-sm"></div>
                 </div>
               </div>
             )}
