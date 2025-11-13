@@ -8,15 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Ban, CheckCircle, Coins, Plus, Minus, Trophy, TrendingDown, Users as UsersIcon, UserPlus } from 'lucide-react';
+import { Search, Ban, CheckCircle, Coins, Plus, Minus, Trophy, TrendingDown, Users as UsersIcon, UserPlus, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 import { logger } from '@/utils/logger';
 import { ERROR_MESSAGES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 
 const Users = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [coinDialogOpen, setCoinDialogOpen] = useState<boolean>(false);
   const [registerDialogOpen, setRegisterDialogOpen] = useState<boolean>(false);
@@ -97,13 +100,36 @@ const Users = () => {
     };
   }, []);
 
-  const filteredUsers = (users || []).filter(user =>
-    user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user?.id?.toString().includes(searchTerm.toLowerCase())
-  );
+  // Sync selectedUser with users list to keep coin balance updated
+  useEffect(() => {
+    if (selectedUser) {
+      const updatedUser = users.find(u => u.id === selectedUser.id);
+      if (updatedUser && updatedUser.coins !== selectedUser.coins) {
+        setSelectedUser(updatedUser);
+      }
+    }
+  }, [users, selectedUser]);
+
+  const filteredUsers = (users || []).filter(user => {
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.id?.toString().includes(searchTerm.toLowerCase());
+    
+    return matchesStatus && matchesSearch;
+  });
 
   const toggleUserStatus = async (userId: string, currentStatus: User['status']) => {
+    // Prevent admin from suspending themselves
+    if (currentUser && currentUser.id === userId && currentStatus === 'active') {
+      toast.error('You cannot suspend your own account');
+      return;
+    }
+
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
       await apiService.updateUserStatus(userId, newStatus);
@@ -111,6 +137,11 @@ const Users = () => {
       setUsers(users.map(user =>
         user.id === userId ? { ...user, status: newStatus } : user
       ));
+      
+      // Auto-switch to suspended filter when user is suspended
+      if (newStatus === 'suspended') {
+        setStatusFilter('suspended');
+      }
       
       toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully`);
     } catch (error) {
@@ -121,6 +152,12 @@ const Users = () => {
   };
 
   const handleCoinManagement = (user: User) => {
+    // Prevent admin from managing their own coins
+    if (currentUser && currentUser.id === user.id) {
+      toast.error('You cannot manage your own coins');
+      return;
+    }
+    
     setSelectedUser(user);
     setCoinAmount('');
     setCoinOperation('add');
@@ -135,34 +172,58 @@ const Users = () => {
     }
 
     // Validate and parse as integer (coins must be whole numbers)
-    const amount = parseInt(coinAmount, 10);
+    const amount = parseInt(coinAmount.trim(), 10);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid positive whole number');
       return;
     }
 
+    // Store original values for potential rollback
+    const originalUser = selectedUser;
+    const originalUsers = users;
+
     try {
+      // Optimistically update UI for better responsiveness
+      const optimisticCoins = coinOperation === 'add' 
+        ? selectedUser.coins + amount 
+        : Math.max(0, selectedUser.coins - amount);
+      
+      // Update local state immediately using functional updates
+      setUsers(prevUsers => prevUsers.map(user =>
+        user.id === selectedUser.id 
+          ? { ...user, coins: optimisticCoins }
+          : user
+      ));
+      
+      // Update selectedUser immediately for dialog
+      setSelectedUser({ ...selectedUser, coins: optimisticCoins });
+
       const result = await apiService.updateUserCoins(selectedUser.id, amount, coinOperation);
       
       // Backend returns { success, user } but we normalize to { success, data }
       const updatedUser = (result.data || (result as any).user) as User;
       if (result.success && updatedUser) {
-        // Update user coins in local state
-        setUsers(users.map(user =>
+        // Update with actual server response
+        setUsers(prevUsers => prevUsers.map(user =>
           user.id === selectedUser.id 
-            ? { 
-                ...user, 
-                coins: updatedUser.coins
-              } 
+            ? { ...user, coins: updatedUser.coins }
             : user
         ));
         
+        // Update selectedUser with server response
+        setSelectedUser({ ...selectedUser, coins: updatedUser.coins });
+        
         toast.success(`Coins ${coinOperation === 'add' ? 'added' : 'removed'} successfully`);
-        setCoinDialogOpen(false);
-        setCoinAmount('');
-        setSelectedUser(null);
+      } else {
+        // Revert optimistic update on failure
+        setUsers(originalUsers);
+        setSelectedUser(originalUser);
+        toast.error(result.message || 'Failed to update coins');
       }
     } catch (error) {
+      // Revert optimistic update on error
+      setUsers(originalUsers);
+      setSelectedUser(originalUser);
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
       logger.error('Failed to update coins:', error);
       toast.error(errorMessage);
@@ -231,28 +292,74 @@ const Users = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 border-border/50 bg-background text-sm"
-            />
+        <div className="flex flex-col gap-4">
+          {/* Status Filter Tabs */}
+          <div className="flex items-center gap-2 p-1 bg-muted/30 rounded-lg border border-border/50">
+            <Filter className="h-4 w-4 text-muted-foreground ml-2" />
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter('all')}
+              className={`flex-1 transition-all ${
+                statusFilter === 'all' 
+                  ? 'bg-primary text-primary-foreground shadow-md' 
+                  : 'hover:bg-muted'
+              }`}
+            >
+              All ({users.length})
+            </Button>
+            <Button
+              variant={statusFilter === 'active' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter('active')}
+              className={`flex-1 transition-all ${
+                statusFilter === 'active' 
+                  ? 'bg-success text-white shadow-md' 
+                  : 'hover:bg-muted'
+              }`}
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+              Active ({users.filter(u => u.status === 'active').length})
+            </Button>
+            <Button
+              variant={statusFilter === 'suspended' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter('suspended')}
+              className={`flex-1 transition-all ${
+                statusFilter === 'suspended' 
+                  ? 'bg-destructive text-white shadow-md' 
+                  : 'hover:bg-muted'
+              }`}
+            >
+              <Ban className="h-3.5 w-3.5 mr-1.5" />
+              Suspended ({users.filter(u => u.status === 'suspended').length})
+            </Button>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Search and Register */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 border-border/50 bg-background text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-3">
             <Badge variant="outline" className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border-primary/20 bg-primary/5">
               {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
             </Badge>
-            <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold neon-glow hover:scale-105 text-xs sm:text-sm">
-                  <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Register Player</span>
-                  <span className="sm:hidden">Register</span>
-                </Button>
-              </DialogTrigger>
+            {currentUser?.role === 'admin' && (
+              <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold neon-glow hover:scale-105 text-xs sm:text-sm">
+                    <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Register Player</span>
+                    <span className="sm:hidden">Register</span>
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="text-xl">Register New Player</DialogTitle>
@@ -334,6 +441,8 @@ const Users = () => {
                 </form>
               </DialogContent>
             </Dialog>
+            )}
+          </div>
           </div>
         </div>
 
@@ -410,7 +519,11 @@ const Users = () => {
                           size="sm"
                           className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
                           onClick={() => handleCoinManagement(user)}
-                          title="Manage coins"
+                          disabled={currentUser ? currentUser.id === user.id : false}
+                          title={currentUser && currentUser.id === user.id 
+                            ? 'You cannot manage your own coins' 
+                            : 'Manage coins'
+                          }
                         >
                           <Coins className="h-4 w-4" />
                         </Button>
@@ -431,9 +544,14 @@ const Users = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => toggleUserStatus(user.id, user.status)}
+                          disabled={currentUser ? (currentUser.id === user.id && user.status === 'active') : false}
                           className={user.status === 'active' 
                             ? 'hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30' 
                             : 'hover:bg-success/10 hover:text-success hover:border-success/30'
+                          }
+                          title={currentUser && currentUser.id === user.id && user.status === 'active' 
+                            ? 'You cannot suspend your own account' 
+                            : undefined
                           }
                         >
                           {user.status === 'active' ? (
@@ -485,7 +603,10 @@ const Users = () => {
                         ? 'shadow-md' 
                         : 'hover:bg-success/10 hover:border-success/30 hover:text-success'
                     }`}
-                    onClick={() => setCoinOperation('add')}
+                    onClick={() => {
+                      setCoinOperation('add');
+                      setCoinAmount('');
+                    }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Coins
@@ -498,7 +619,10 @@ const Users = () => {
                         ? 'shadow-md' 
                         : 'hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive'
                     }`}
-                    onClick={() => setCoinOperation('remove')}
+                    onClick={() => {
+                      setCoinOperation('remove');
+                      setCoinAmount('');
+                    }}
                   >
                     <Minus className="h-4 w-4 mr-2" />
                     Remove Coins
@@ -509,12 +633,12 @@ const Users = () => {
                 <Label htmlFor="coinAmount" className="text-sm font-semibold">Amount</Label>
                 <Input
                   id="coinAmount"
-                  type="number"
-                  min="1"
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={coinAmount}
                   onChange={(e) => {
-                    const value = e.target.value;
+                    const value = e.target.value.trim();
                     // Only allow positive integers
                     if (value === '' || /^\d+$/.test(value)) {
                       setCoinAmount(value);
@@ -539,10 +663,17 @@ const Users = () => {
                     coinOperation === 'add' ? 'text-success' : 'text-destructive'
                   }`}>
                     {(() => {
-                      const amount = parseInt(coinAmount, 10) || 0;
+                      // Get the latest user data from users list to ensure accuracy
+                      const currentUser = users.find(u => u.id === selectedUser.id) || selectedUser;
+                      const amount = parseInt(coinAmount.trim(), 10);
+                      
+                      if (isNaN(amount) || amount <= 0) {
+                        return currentUser.coins;
+                      }
+                      
                       return coinOperation === 'add' 
-                        ? selectedUser.coins + amount
-                        : Math.max(0, selectedUser.coins - amount);
+                        ? currentUser.coins + amount
+                        : Math.max(0, currentUser.coins - amount);
                     })()} coins
                   </div>
                 </div>

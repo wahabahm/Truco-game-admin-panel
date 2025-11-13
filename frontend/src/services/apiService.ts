@@ -232,8 +232,8 @@ export const apiService = {
   },
 
   registerUser: async (name: string, email: string, password: string): Promise<ApiResponse<User>> => {
-    // Registration endpoint returns { success, token, user } but we normalize it to ApiResponse format
-    const response = await apiRequest<{ success: boolean; token?: string; user?: User; message?: string }>('/auth/register', {
+    // Admin-only endpoint for registering players through admin panel
+    const response = await apiRequest<{ success: boolean; user?: User; message?: string }>('/users/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password }),
     });
