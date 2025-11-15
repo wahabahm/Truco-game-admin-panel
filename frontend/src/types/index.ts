@@ -1,100 +1,164 @@
 // User Types
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'player' | 'admin';
-  status: 'active' | 'suspended';
-  coins: number;
+export interface WalletDto {
+  balance: number;
+}
+
+export interface StatsDto {
   wins: number;
   losses: number;
+  matchesPlayed: number;
+}
+
+export interface UserDto {
+  _id: string;
+  username: string;
+  email: string;
+  role: string;
+  avatar: string | null;
+  emailVerified: boolean;
+  wallet: WalletDto;
+  stats: StatsDto;
   createdAt: string;
 }
 
 // Match Types
-export interface Match {
-  id: string;
-  name: string;
-  type: 'public' | 'private';
-  cost: number;
-  prize: number;
-  matchDate: string | null;
-  status: 'active' | 'completed' | 'cancelled';
-  players: number;
-  player1Id: string | null;
-  player2Id: string | null;
-  winnerId: string | null;
-  player1Name: string | null;
-  player2Name: string | null;
-  winnerName: string | null;
+export interface MatchDto {
+  _id: string;
+  name?: string;
+  type?: string;
+  cost?: number;
+  prize?: number;
+  matchDate?: string | null;
+  tournament: TournamentDto | null;
+  players: UserDto[];
+  status: string;
+  winner: UserDto | null;
+  finishedAt: string | null;
   createdAt: string;
-  completedAt: string | null;
 }
 
 // Tournament Types
-export interface Tournament {
-  id: string;
+export interface TournamentDto {
+  _id: string;
   name: string;
-  type: 'public' | 'private';
-  maxPlayers: 4 | 8;
-  entryCost: number;
-  prizePool: number;
-  awardPercentage?: number;
-  status: 'registration' | 'active' | 'completed' | 'cancelled';
-  players: string[];
-  participants?: Array<{ id: string; name: string }>;
-  participantCount?: number;
-  bracket?: TournamentBracket;
-  champion?: string;
-  championName?: string;
-  winnerId?: string;
-  winnerName?: string;
+  description: string;
+  type?: string;
+  entryFee: number;
+  maxPlayers: number;
+  status: string;
+  players: UserDto[];
+  champion: UserDto | null;
   startDate: string | null;
-  createdAt: string;
-  cancelledAt?: string;
-  cancellationReason?: string;
-}
-
-export interface TournamentBracket {
-  rounds: TournamentRound[];
-}
-
-export interface TournamentRound {
-  roundNumber: number;
-  matches: TournamentMatch[];
-}
-
-export interface TournamentMatch {
-  matchIndex: number;
-  player1Id: string | null;
-  player2Id: string | null;
-  winnerId: string | null;
-  player1Name?: string | null;
-  player2Name?: string | null;
-  winnerName?: string | null;
-  status: 'pending' | 'completed';
+  endDate: string | null;
+  tournamentAwardPercentage: number;
+  matches: MatchDto[];
+  prizeDistributed: boolean;
 }
 
 // Transaction Types
-export interface Transaction {
-  id: string;
-  userId: string;
-  userName?: string;
-  type: 'match_entry' | 'match_win' | 'match_loss' | 'tournament_entry' | 'tournament_win' | 'admin_add' | 'admin_remove';
+export interface TransactionMetaDto {
+  [key: string]: any;
+}
+
+export interface TransactionDto {
+  _id: string;
+  user: UserDto;
+  type: string;
   amount: number;
-  description: string;
-  matchId?: string | null;
-  tournamentId?: string | null;
+  reason: string;
+  balanceBefore: number;
+  balanceAfter: number;
+  meta: TransactionMetaDto;
   createdAt: string;
 }
 
-// Dashboard Types
-export interface DashboardStats {
-  totalUsers: number;
-  totalCoins: number;
-  coinsIssued?: number;
-  coinsUsedInTournaments?: number;
-  coinsUsedInMatches?: number;
+// Alert Types
+export interface AlertMetadataDto {
+  rawJson?: string;
+  [key: string]: any;
+}
+
+export interface AlertDto {
+  _id: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  player: UserDto | null;
+  match: MatchDto | null;
+  tournament: TournamentDto | null;
+  metadata: AlertMetadataDto;
+  status: 'pending' | 'acknowledged' | 'resolved';
+  acknowledgedBy: UserDto | null;
+  acknowledgedAt: string | null;
+  resolvedBy: UserDto | null;
+  resolvedAt: string | null;
+  resolution: string | null;
+  source: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Request/Response Types
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface EmailBodyRequest {
+  email: string;
+}
+
+export interface OTPRequest {
+  otp: string;
+}
+
+export interface RegisterResponse {
+  id: string;
+  username: string;
+  email: string;
+  message: string;
+  AuthToken: string;
+}
+
+export interface EnterTournamentResponse {
+  ok: boolean;
+  coins: number;
+}
+
+export interface CreateTournamentMatchResponse {
+  ok: boolean;
+  match: MatchDto;
+}
+
+export interface CreateTournamentMatchRequest {
+  participants: string[];
+  entryFee: number;
+  gameType: string;
+}
+
+export interface AdminCheckResponse {
+  ok: boolean;
+  role: string;
+}
+
+export interface FinalizeChampionRequest {
+  championId: string;
+}
+
+export interface CreateTournamentRequestAdmin {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  maxPlayers: number;
+  entryFee: number;
 }
 
 // API Response Types
@@ -111,7 +175,16 @@ export interface ApiError {
   errors?: Array<{ msg: string; param: string }>;
 }
 
-// Form Types
+// Dashboard Types (keeping for backward compatibility if needed)
+export interface DashboardStats {
+  totalUsers: number;
+  totalCoins: number;
+  coinsIssued?: number;
+  coinsUsedInTournaments?: number;
+  coinsUsedInMatches?: number;
+}
+
+// Form Types (for admin panel)
 export interface CreateMatchForm {
   name: string;
   type: 'public' | 'private';
@@ -129,15 +202,15 @@ export interface CreateTournamentForm {
   startDate: string | null;
 }
 
-// User Update Types
 export interface UpdateUserData {
-  name?: string;
+  username?: string;
   email?: string;
   status?: 'active' | 'suspended';
 }
 
-export interface UpdateUserCoinsData {
-  amount: number;
-  operation: 'add' | 'remove';
-}
+// Type aliases for backward compatibility
+export type User = UserDto;
+export type Match = MatchDto;
+export type Tournament = TournamentDto;
+export type Transaction = TransactionDto;
 
