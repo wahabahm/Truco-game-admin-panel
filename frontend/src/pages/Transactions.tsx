@@ -14,8 +14,10 @@ import type { Transaction } from '@/types';
 import { logger } from '@/utils/logger';
 import { toast } from 'sonner';
 import { ERROR_MESSAGES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 
 const Transactions = () => {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -52,9 +54,9 @@ const Transactions = () => {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(transaction =>
-        transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.userId?.toString().includes(searchTerm.toLowerCase())
+        transaction.reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.user?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.user?._id?.toString().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -220,24 +222,26 @@ const Transactions = () => {
                 className="pl-9 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-11 shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('json')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {user?.role === 'admin' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-11 shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('json')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
@@ -338,14 +342,15 @@ const Transactions = () => {
 
         {/* Transactions Table */}
         <div className="border-2 border-border/50 rounded-xl shadow-2xl overflow-hidden bg-card/90 backdrop-blur-md game-card animate-fade-in delay-300">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow className="bg-gradient-to-r from-muted/40 to-muted/20 hover:bg-muted/30 border-b border-border/50">
-                <TableHead className="font-bold text-foreground">User</TableHead>
-                <TableHead className="font-bold text-foreground">Type</TableHead>
-                <TableHead className="font-bold text-foreground">Amount</TableHead>
-                <TableHead className="font-bold text-foreground">Description</TableHead>
-                <TableHead className="font-bold text-foreground">Timestamp</TableHead>
+                <TableHead className="font-bold text-foreground min-w-[150px]">User</TableHead>
+                <TableHead className="font-bold text-foreground min-w-[120px]">Type</TableHead>
+                <TableHead className="font-bold text-foreground min-w-[100px]">Amount</TableHead>
+                <TableHead className="font-bold text-foreground min-w-[200px]">Description</TableHead>
+                <TableHead className="font-bold text-foreground min-w-[150px] hidden md:table-cell">Timestamp</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -374,11 +379,11 @@ const Transactions = () => {
                 </TableRow>
               ) : (
                 transactions.map((transaction: Transaction) => (
-                  <TableRow key={transaction.id} className="hover:bg-primary/10 hover:shadow-md transition-all duration-300 border-b border-border/30 group">
+                  <TableRow key={transaction._id} className="hover:bg-primary/10 hover:shadow-md transition-all duration-300 border-b border-border/30 group">
                     <TableCell>
                       <div>
-                        <div className="font-medium">{transaction.userName || `User ${transaction.userId}`}</div>
-                        <div className="text-xs text-muted-foreground">{(transaction as any).userEmail || transaction.userId}</div>
+                        <div className="font-medium">{transaction.user?.username || `User ${transaction.user?._id || ''}`}</div>
+                        <div className="text-xs text-muted-foreground">{transaction.user?.email || transaction.user?._id || ''}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -398,8 +403,8 @@ const Transactions = () => {
                         <span>{transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()} coins</span>
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-md">{transaction.description || '-'}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="max-w-md">{transaction.reason || '-'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                       {(transaction as any).timestamp ? new Date((transaction as any).timestamp).toLocaleString() : (transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : '-')}
                     </TableCell>
                   </TableRow>
@@ -407,6 +412,7 @@ const Transactions = () => {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
     </AppLayout>

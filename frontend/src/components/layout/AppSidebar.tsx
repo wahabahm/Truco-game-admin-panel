@@ -25,11 +25,11 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 
 const menuItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Users', url: '/users', icon: Users },
-  { title: 'Matches', url: '/matches', icon: Swords },
-  { title: 'Tournaments', url: '/tournaments', icon: Trophy },
-  { title: 'Transactions', url: '/transactions', icon: Receipt },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, adminOnly: false },
+  { title: 'Users', url: '/users', icon: Users, adminOnly: true },
+  { title: 'Matches', url: '/matches', icon: Swords, adminOnly: false },
+  { title: 'Tournaments', url: '/tournaments', icon: Trophy, adminOnly: false },
+  { title: 'Transactions', url: '/transactions', icon: Receipt, adminOnly: true },
 ];
 
 export const AppSidebar = () => {
@@ -89,30 +89,32 @@ export const AppSidebar = () => {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      onClick={handleNavClick}
-                      className={({ isActive }) => {
-                        const baseClasses = "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group";
-                        const activeClasses = isActive
-                          ? 'bg-gradient-to-r from-sidebar-primary/20 to-sidebar-primary/10 text-sidebar-accent-foreground font-semibold shadow-md border border-sidebar-primary/30'
-                          : 'hover:bg-sidebar-accent/40 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:translate-x-1';
-                        return `${baseClasses} ${activeClasses}`;
-                      }}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon className={`h-4.5 w-4.5 flex-shrink-0 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/60 group-hover:text-sidebar-foreground'}`} />
-                          {!isCollapsed && <span className="text-sm">{item.title}</span>}
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems
+                .filter((item) => !item.adminOnly || user?.role === 'admin')
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        onClick={handleNavClick}
+                        className={({ isActive }) => {
+                          const baseClasses = "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group";
+                          const activeClasses = isActive
+                            ? 'bg-gradient-to-r from-sidebar-primary/20 to-sidebar-primary/10 text-sidebar-accent-foreground font-semibold shadow-md border border-sidebar-primary/30'
+                            : 'hover:bg-sidebar-accent/40 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:translate-x-1';
+                          return `${baseClasses} ${activeClasses}`;
+                        }}
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <item.icon className={`h-4.5 w-4.5 flex-shrink-0 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/60 group-hover:text-sidebar-foreground'}`} />
+                            {!isCollapsed && <span className="text-sm">{item.title}</span>}
+                          </>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

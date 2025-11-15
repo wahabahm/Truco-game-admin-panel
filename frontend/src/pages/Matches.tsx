@@ -17,8 +17,10 @@ import { toast } from 'sonner';
 import type { Match, User, CreateMatchForm } from '@/types';
 import { logger } from '@/utils/logger';
 import { ERROR_MESSAGES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 
 const Matches = () => {
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -61,13 +63,13 @@ const Matches = () => {
       // Calculate match statistics
       const completed = matchesData.filter(m => m.status === 'completed');
       const active = matchesData.filter(m => m.status === 'active');
-      const totalPrizeDistributed = completed.reduce((sum, m) => sum + (m.prize || 0), 0);
+      const totalPrizeDistributed = completed.reduce((sum, m) => sum + ((m as any).prize || 0), 0);
       const totalEntryFees = matchesData.reduce((sum, m) => {
-        const players = m.players || 0;
-        return sum + ((m.cost || 0) * players);
+        const players = Array.isArray(m.players) ? m.players.length : 0;
+        return sum + (((m as any).cost || 0) * players);
       }, 0);
       const averagePrize = completed.length > 0 ? totalPrizeDistributed / completed.length : 0;
-      const averageCost = matchesData.length > 0 ? matchesData.reduce((sum, m) => sum + (m.cost || 0), 0) / matchesData.length : 0;
+      const averageCost = matchesData.length > 0 ? matchesData.reduce((sum, m) => sum + ((m as any).cost || 0), 0) / matchesData.length : 0;
       
       setMatchStats({
         total: matchesData.length,
@@ -92,13 +94,13 @@ const Matches = () => {
     // Recalculate statistics
     const completed = matchesData.filter(m => m.status === 'completed');
     const active = matchesData.filter(m => m.status === 'active');
-    const totalPrizeDistributed = completed.reduce((sum, m) => sum + (m.prize || 0), 0);
+    const totalPrizeDistributed = completed.reduce((sum, m) => sum + ((m as any).prize || 0), 0);
     const totalEntryFees = matchesData.reduce((sum, m) => {
-      const players = m.players || 0;
-      return sum + ((m.cost || 0) * players);
+      const players = Array.isArray(m.players) ? m.players.length : 0;
+      return sum + (((m as any).cost || 0) * players);
     }, 0);
     const averagePrize = completed.length > 0 ? totalPrizeDistributed / completed.length : 0;
-    const averageCost = matchesData.length > 0 ? matchesData.reduce((sum, m) => sum + (m.cost || 0), 0) / matchesData.length : 0;
+    const averageCost = matchesData.length > 0 ? matchesData.reduce((sum, m) => sum + ((m as any).cost || 0), 0) / matchesData.length : 0;
     
     setMatchStats({
       total: matchesData.length,
@@ -164,9 +166,11 @@ const Matches = () => {
 
   const handleRecordResult = (match: Match) => {
     setSelectedMatch(match);
+    const player1Id = match.players?.[0]?._id || (match as any).player1Id || '';
+    const player2Id = match.players?.[1]?._id || (match as any).player2Id || '';
     setResultData({
-      winnerId: match.player1Id || '',
-      loserId: match.player2Id || ''
+      winnerId: player1Id,
+      loserId: player2Id
     });
     setIsResultDialogOpen(true);
   };
@@ -190,19 +194,21 @@ const Matches = () => {
     }
 
     // Validate that both players are in the match
-    if (resultData.winnerId !== selectedMatch.player1Id && resultData.winnerId !== selectedMatch.player2Id) {
+    const player1Id = selectedMatch.players?.[0]?._id || (selectedMatch as any).player1Id;
+    const player2Id = selectedMatch.players?.[1]?._id || (selectedMatch as any).player2Id;
+    if (resultData.winnerId !== player1Id && resultData.winnerId !== player2Id) {
       toast.error('Winner must be one of the players in this match');
       return;
     }
 
-    if (resultData.loserId !== selectedMatch.player1Id && resultData.loserId !== selectedMatch.player2Id) {
+    if (resultData.loserId !== player1Id && resultData.loserId !== player2Id) {
       toast.error('Loser must be one of the players in this match');
       return;
     }
 
     try {
       const result = await apiService.recordMatchResult(
-        selectedMatch.id,
+        selectedMatch._id,
         resultData.winnerId,
         resultData.loserId
       );
@@ -224,8 +230,8 @@ const Matches = () => {
   };
 
   const getUserName = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.name : `User ${userId}`;
+    const user = users.find(u => u._id === userId);
+    return user ? user.username : `User ${userId}`;
   };
 
   /**
@@ -251,8 +257,8 @@ const Matches = () => {
   // Get available matches (active, public, not full)
   const availableMatches = matches.filter(match => 
     match.status === 'active' && 
-    match.type === 'public' && 
-    match.players < 2
+    (match as any).type === 'public' && 
+    (Array.isArray(match.players) ? match.players.length : 0) < 2
   );
 
   const handleExport = async (format: 'csv' | 'json') => {
@@ -289,24 +295,26 @@ const Matches = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50 text-xs sm:text-sm">
-                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('json')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {user?.role === 'admin' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50 text-xs sm:text-sm">
+                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('json')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button
               onClick={handleAutoJoin}
               disabled={isAutoJoining || availableMatches.length === 0}
@@ -318,14 +326,15 @@ const Matches = () => {
               <span className="hidden sm:inline">{isAutoJoining ? 'Joining...' : 'Quick Join'}</span>
               <span className="sm:hidden">{isAutoJoining ? '...' : 'Join'}</span>
             </Button>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105 text-xs sm:text-sm">
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Create Match</span>
-                  <span className="sm:hidden">Create</span>
-                </Button>
-              </DialogTrigger>
+            {user?.role === 'admin' && (
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105 text-xs sm:text-sm">
+                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Create Match</span>
+                    <span className="sm:hidden">Create</span>
+                  </Button>
+                </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Match</DialogTitle>
@@ -425,6 +434,7 @@ const Matches = () => {
               </form>
             </DialogContent>
           </Dialog>
+            )}
           </div>
         </div>
 
@@ -524,18 +534,19 @@ const Matches = () => {
         )}
 
         <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead>Match Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Entry Cost</TableHead>
-                <TableHead>Prize</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Players</TableHead>
-                {filter === 'completed' && <TableHead>Winner</TableHead>}
-                <TableHead>Actions</TableHead>
+                <TableHead className="min-w-[150px]">Match Name</TableHead>
+                <TableHead className="min-w-[80px]">Type</TableHead>
+                <TableHead className="min-w-[120px] hidden md:table-cell">Date</TableHead>
+                <TableHead className="min-w-[100px]">Entry Cost</TableHead>
+                <TableHead className="min-w-[100px]">Prize</TableHead>
+                <TableHead className="min-w-[100px]">Status</TableHead>
+                <TableHead className="min-w-[80px]">Players</TableHead>
+                {filter === 'completed' && <TableHead className="min-w-[120px]">Winner</TableHead>}
+                <TableHead className="min-w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -569,26 +580,35 @@ const Matches = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredMatches.map((match) => (
-                  <TableRow key={match.id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
-                    <TableCell className="font-medium">{match.name}</TableCell>
+                filteredMatches.map((match) => {
+                  const matchAny = match as any;
+                  const player1Id = match.players?.[0]?._id || matchAny.player1Id;
+                  const player2Id = match.players?.[1]?._id || matchAny.player2Id;
+                  const winnerId = match.winner?._id || matchAny.winnerId;
+                  const playersCount = Array.isArray(match.players) ? match.players.length : 0;
+                  
+                  return (
+                  <TableRow key={match._id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
+                    <TableCell className="font-medium">{matchAny.name || 'Match'}</TableCell>
                     <TableCell>
-                      <Badge variant={match.type === 'public' ? 'default' : 'secondary'}>
-                        {match.type}
+                      <Badge variant={matchAny.type === 'public' ? 'default' : 'secondary'}>
+                        {matchAny.type || 'public'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {match.matchDate ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          {match.matchDate}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
+                      <div className="hidden md:table-cell">
+                        {matchAny.matchDate ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                            {matchAny.matchDate}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell>{match.cost} coins</TableCell>
-                    <TableCell>{match.prize} coins</TableCell>
+                    <TableCell>{matchAny.cost || 0} coins</TableCell>
+                    <TableCell>{matchAny.prize || 0} coins</TableCell>
                     <TableCell>
                       <Badge 
                         variant={match.status === 'active' ? 'default' : 'secondary'}
@@ -602,22 +622,22 @@ const Matches = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm font-medium">
-                        {match.player1Id && getUserName(match.player1Id)}
-                        {match.player2Id && (
+                        {player1Id && getUserName(player1Id)}
+                        {player2Id && (
                           <span className="text-muted-foreground mx-2">vs</span>
                         )}
-                        {match.player2Id && getUserName(match.player2Id)}
-                        {!match.player1Id && !match.player2Id && (
+                        {player2Id && getUserName(player2Id)}
+                        {!player1Id && !player2Id && (
                           <span className="text-muted-foreground">No players</span>
                         )}
                       </div>
                     </TableCell>
                     {filter === 'completed' && (
                       <TableCell>
-                        {match.winnerId ? (
+                        {winnerId ? (
                           <div className="flex items-center gap-1.5 text-success font-semibold">
                             <Trophy className="h-4 w-4" />
-                            {getUserName(match.winnerId)}
+                            {getUserName(winnerId)}
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
@@ -625,16 +645,20 @@ const Matches = () => {
                       </TableCell>
                     )}
                     <TableCell>
-                      {match.status === 'active' && match.players === 2 ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRecordResult(match)}
-                          className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                          Record Result
-                        </Button>
+                      {match.status === 'active' && playersCount === 2 ? (
+                        user?.role === 'admin' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRecordResult(match)}
+                            className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                            Record Result
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Match in progress</span>
+                        )
                       ) : (
                         <span className="text-muted-foreground text-sm">
                           {match.status === 'active' ? 'Waiting for players' : 'Completed'}
@@ -642,10 +666,12 @@ const Matches = () => {
                       )}
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
 
         {/* Record Result Dialog */}
@@ -657,7 +683,7 @@ const Matches = () => {
                 {selectedMatch && (
                   <div className="mt-2 p-3 bg-muted/50 rounded-lg">
                     <div className="text-sm text-muted-foreground mb-1">Match</div>
-                    <div className="font-semibold text-lg">{selectedMatch.name}</div>
+                    <div className="font-semibold text-lg">{(selectedMatch as any).name || 'Match'}</div>
                   </div>
                 )}
               </DialogDescription>
@@ -674,16 +700,24 @@ const Matches = () => {
                       <SelectValue placeholder="Select winner" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedMatch.player1Id && (
-                        <SelectItem value={selectedMatch.player1Id}>
-                          {getUserName(selectedMatch.player1Id)}
-                        </SelectItem>
-                      )}
-                      {selectedMatch.player2Id && (
-                        <SelectItem value={selectedMatch.player2Id}>
-                          {getUserName(selectedMatch.player2Id)}
-                        </SelectItem>
-                      )}
+                      {(() => {
+                        const player1Id = selectedMatch.players?.[0]?._id || (selectedMatch as any).player1Id;
+                        const player2Id = selectedMatch.players?.[1]?._id || (selectedMatch as any).player2Id;
+                        return (
+                          <>
+                            {player1Id && (
+                              <SelectItem value={player1Id}>
+                                {getUserName(player1Id)}
+                              </SelectItem>
+                            )}
+                            {player2Id && (
+                              <SelectItem value={player2Id}>
+                                {getUserName(player2Id)}
+                              </SelectItem>
+                            )}
+                          </>
+                        );
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>
@@ -697,26 +731,34 @@ const Matches = () => {
                       <SelectValue placeholder="Select loser" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedMatch.player1Id && (
-                        <SelectItem value={selectedMatch.player1Id}>
-                          {getUserName(selectedMatch.player1Id)}
-                        </SelectItem>
-                      )}
-                      {selectedMatch.player2Id && (
-                        <SelectItem value={selectedMatch.player2Id}>
-                          {getUserName(selectedMatch.player2Id)}
-                        </SelectItem>
-                      )}
+                      {(() => {
+                        const player1Id = selectedMatch.players?.[0]?._id || (selectedMatch as any).player1Id;
+                        const player2Id = selectedMatch.players?.[1]?._id || (selectedMatch as any).player2Id;
+                        return (
+                          <>
+                            {player1Id && (
+                              <SelectItem value={player1Id}>
+                                {getUserName(player1Id)}
+                              </SelectItem>
+                            )}
+                            {player2Id && (
+                              <SelectItem value={player2Id}>
+                                {getUserName(player2Id)}
+                              </SelectItem>
+                            )}
+                          </>
+                        );
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-accent/10 to-primary/10 rounded-lg border-2 border-accent/20 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Prize Pool</span>
-                    <span className="text-lg font-bold text-accent">{selectedMatch.prize} coins</span>
+                    <span className="text-lg font-bold text-accent">{(selectedMatch as any).prize || 0} coins</span>
                   </div>
                   <div className="text-xs text-muted-foreground pt-2 border-t border-border/50">
-                    Winner will receive {selectedMatch.prize} coins
+                    Winner will receive {(selectedMatch as any).prize || 0} coins
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">

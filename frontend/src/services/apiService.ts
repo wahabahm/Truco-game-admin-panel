@@ -1,10 +1,10 @@
 import { API_CONFIG, STORAGE_KEYS } from '@/constants';
 import { logger } from '@/utils/logger';
 import type {
-  User,
-  Match,
-  Tournament,
-  Transaction,
+  UserDto,
+  MatchDto,
+  TournamentDto,
+  TransactionDto,
   DashboardStats,
   CreateMatchForm,
   CreateTournamentForm,
@@ -63,24 +63,24 @@ const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = 
 };
 
 export const apiService = {
-  getUsers: async (search?: string, signal?: AbortSignal): Promise<User[]> => {
+  getUsers: async (search?: string, signal?: AbortSignal): Promise<UserDto[]> => {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    const response = await apiRequest<{ users: User[] }>(`/users${params}`, {
+    const response = await apiRequest<{ users: UserDto[] }>(`/users${params}`, {
       signal,
     });
     return response.users || [];
   },
   
-  updateUser: async (id: string, data: UpdateUserData): Promise<ApiResponse<User>> => {
-    const response = await apiRequest<ApiResponse<User>>(`/users/${id}`, {
+  updateUser: async (id: string, data: UpdateUserData): Promise<ApiResponse<UserDto>> => {
+    const response = await apiRequest<ApiResponse<UserDto>>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     return response;
   },
 
-  updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove'): Promise<ApiResponse<User>> => {
-    const response = await apiRequest<ApiResponse<User> & { user?: User }>(`/users/${userId}/coins`, {
+  updateUserCoins: async (userId: string, amount: number, operation: 'add' | 'remove'): Promise<ApiResponse<UserDto>> => {
+    const response = await apiRequest<ApiResponse<UserDto> & { user?: UserDto }>(`/users/${userId}/coins`, {
       method: 'PATCH',
       body: JSON.stringify({ amount, operation }),
     });
@@ -95,22 +95,22 @@ export const apiService = {
     return response;
   },
 
-  updateUserStatus: async (userId: string, status: 'active' | 'suspended'): Promise<ApiResponse<User>> => {
-    const response = await apiRequest<ApiResponse<User>>(`/users/${userId}/status`, {
+  updateUserStatus: async (userId: string, status: 'active' | 'suspended'): Promise<ApiResponse<UserDto>> => {
+    const response = await apiRequest<ApiResponse<UserDto>>(`/users/${userId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
     return response;
   },
   
-  getMatches: async (status?: string): Promise<Match[]> => {
+  getMatches: async (status?: string): Promise<MatchDto[]> => {
     const params = status ? `?status=${status}` : '';
-    const response = await apiRequest<{ matches: Match[] }>(`/matches${params}`);
+    const response = await apiRequest<{ matches: MatchDto[] }>(`/matches${params}`);
     return response.matches || [];
   },
   
-  createMatch: async (data: CreateMatchForm): Promise<ApiResponse<Match>> => {
-    const response = await apiRequest<ApiResponse<Match>>('/matches', {
+  createMatch: async (data: CreateMatchForm): Promise<ApiResponse<MatchDto>> => {
+    const response = await apiRequest<ApiResponse<MatchDto>>('/matches', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,
@@ -123,43 +123,43 @@ export const apiService = {
     return response;
   },
 
-  joinMatch: async (matchId: string): Promise<ApiResponse<Match>> => {
-    const response = await apiRequest<ApiResponse<Match>>(`/matches/${matchId}/join`, {
+  joinMatch: async (matchId: string): Promise<ApiResponse<MatchDto>> => {
+    const response = await apiRequest<ApiResponse<MatchDto>>(`/matches/${matchId}/join`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  autoJoinMatch: async (): Promise<ApiResponse<Match>> => {
-    const response = await apiRequest<ApiResponse<Match>>('/matches/auto-join', {
+  autoJoinMatch: async (): Promise<ApiResponse<MatchDto>> => {
+    const response = await apiRequest<ApiResponse<MatchDto>>('/matches/auto-join', {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  recordMatchResult: async (matchId: string, winnerId: string, loserId: string): Promise<ApiResponse<Match>> => {
-    const response = await apiRequest<ApiResponse<Match>>(`/matches/${matchId}/result`, {
+  recordMatchResult: async (matchId: string, winnerId: string, loserId: string): Promise<ApiResponse<MatchDto>> => {
+    const response = await apiRequest<ApiResponse<MatchDto>>(`/matches/${matchId}/result`, {
       method: 'POST',
       body: JSON.stringify({ winnerId, loserId }),
     });
     return response;
   },
   
-  getTournaments: async (status?: string): Promise<Tournament[]> => {
+  getTournaments: async (status?: string): Promise<TournamentDto[]> => {
     const params = status ? `?status=${status}` : '';
-    const response = await apiRequest<{ tournaments: Tournament[] }>(`/tournaments${params}`);
+    const response = await apiRequest<{ tournaments: TournamentDto[] }>(`/tournaments${params}`);
     return response.tournaments || [];
   },
 
-  getTournament: async (id: string): Promise<Tournament> => {
-    const response = await apiRequest<{ tournament: Tournament }>(`/tournaments/${id}`);
+  getTournament: async (id: string): Promise<TournamentDto> => {
+    const response = await apiRequest<{ tournament: TournamentDto }>(`/tournaments/${id}`);
     return response.tournament;
   },
   
-  createTournament: async (data: CreateTournamentForm): Promise<ApiResponse<Tournament>> => {
-    const response = await apiRequest<ApiResponse<Tournament>>('/tournaments', {
+  createTournament: async (data: CreateTournamentForm): Promise<ApiResponse<TournamentDto>> => {
+    const response = await apiRequest<ApiResponse<TournamentDto>>('/tournaments', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,
@@ -173,16 +173,16 @@ export const apiService = {
     return response;
   },
 
-  joinTournament: async (tournamentId: string): Promise<ApiResponse<Tournament>> => {
-    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/join`, {
+  joinTournament: async (tournamentId: string): Promise<ApiResponse<TournamentDto>> => {
+    const response = await apiRequest<ApiResponse<TournamentDto>>(`/tournaments/${tournamentId}/join`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
     return response;
   },
 
-  recordTournamentMatch: async (tournamentId: string, roundNumber: number, matchIndex: number, winnerId: string): Promise<ApiResponse<Tournament>> => {
-    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/record-match`, {
+  recordTournamentMatch: async (tournamentId: string, roundNumber: number, matchIndex: number, winnerId: string): Promise<ApiResponse<TournamentDto>> => {
+    const response = await apiRequest<ApiResponse<TournamentDto>>(`/tournaments/${tournamentId}/record-match`, {
       method: 'POST',
       body: JSON.stringify({
         roundNumber,
@@ -193,17 +193,17 @@ export const apiService = {
     return response;
   },
 
-  cancelTournament: async (tournamentId: string, reason?: string): Promise<ApiResponse<Tournament>> => {
-    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/cancel`, {
+  cancelTournament: async (tournamentId: string, reason?: string): Promise<ApiResponse<TournamentDto>> => {
+    const response = await apiRequest<ApiResponse<TournamentDto>>(`/tournaments/${tournamentId}/cancel`, {
       method: 'POST',
       body: JSON.stringify({ reason: reason || '' }),
     });
     return response;
   },
   
-  getTransactions: async (userId?: string): Promise<Transaction[]> => {
+  getTransactions: async (userId?: string): Promise<TransactionDto[]> => {
     const params = userId ? `?userId=${userId}` : '';
-    const response = await apiRequest<{ transactions: Transaction[] }>(`/transactions${params}`);
+    const response = await apiRequest<{ transactions: TransactionDto[] }>(`/transactions${params}`);
     return response.transactions || [];
   },
   
@@ -231,17 +231,25 @@ export const apiService = {
     return response;
   },
 
-  registerUser: async (name: string, email: string, password: string): Promise<ApiResponse<User>> => {
+  registerUser: async (username: string, email: string, password: string): Promise<ApiResponse<UserDto> & { verificationToken?: string; verificationLink?: string }> => {
     // Admin-only endpoint for registering players through admin panel
-    const response = await apiRequest<{ success: boolean; user?: User; message?: string }>('/users/register', {
+    const response = await apiRequest<{ 
+      success: boolean; 
+      user?: UserDto; 
+      message?: string;
+      verificationToken?: string;
+      verificationLink?: string;
+    }>('/users/register', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name: username, email, password }),
     });
     // Normalize response to ApiResponse format
     if (response.success && response.user) {
       return {
         success: true,
-        data: response.user
+        data: response.user,
+        verificationToken: response.verificationToken,
+        verificationLink: response.verificationLink
       };
     }
     return {
@@ -250,8 +258,8 @@ export const apiService = {
     };
   },
 
-  getMatch: async (id: string): Promise<Match> => {
-    const response = await apiRequest<{ match: Match }>(`/matches/${id}`);
+  getMatch: async (id: string): Promise<MatchDto> => {
+    const response = await apiRequest<{ match: MatchDto }>(`/matches/${id}`);
     return response.match;
   },
 
@@ -260,13 +268,13 @@ export const apiService = {
     return response.stats;
   },
 
-  getTournamentPlayers: async (tournamentId: string): Promise<{ players: User[] }> => {
-    const response = await apiRequest<{ players: User[] }>(`/tournaments/${tournamentId}/players`);
+  getTournamentPlayers: async (tournamentId: string): Promise<{ players: UserDto[] }> => {
+    const response = await apiRequest<{ players: UserDto[] }>(`/tournaments/${tournamentId}/players`);
     return response;
   },
 
-  updateTournamentAwardPercentage: async (tournamentId: string, percentage: number): Promise<ApiResponse<Tournament>> => {
-    const response = await apiRequest<ApiResponse<Tournament>>(`/tournaments/${tournamentId}/update-award-percentage`, {
+  updateTournamentAwardPercentage: async (tournamentId: string, percentage: number): Promise<ApiResponse<TournamentDto>> => {
+    const response = await apiRequest<ApiResponse<TournamentDto>>(`/tournaments/${tournamentId}/update-award-percentage`, {
       method: 'POST',
       body: JSON.stringify({ percentage }),
     });

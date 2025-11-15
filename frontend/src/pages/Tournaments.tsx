@@ -16,8 +16,10 @@ import { toast } from 'sonner';
 import type { Tournament, CreateTournamentForm } from '@/types';
 import { logger } from '@/utils/logger';
 import { ERROR_MESSAGES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 
 const Tournaments = () => {
+  const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,7 +163,7 @@ const Tournaments = () => {
 
     try {
       const result = await apiService.recordTournamentMatch(
-        selectedTournament.id,
+        selectedTournament._id,
         matchData.roundNumber,
         matchData.matchIndex,
         matchData.winnerId
@@ -169,7 +171,7 @@ const Tournaments = () => {
       if (result.success) {
         toast.success('Match result recorded successfully');
         setIsMatchDialogOpen(false);
-        await handleViewTournament(selectedTournament.id);
+        await handleViewTournament(selectedTournament._id);
         fetchTournaments();
       }
     } catch (error) {
@@ -191,8 +193,8 @@ const Tournaments = () => {
 
   const getParticipantName = (participantId: string) => {
     if (!selectedTournament) return `User ${participantId}`;
-    const participant = selectedTournament.participants?.find((p) => p.id === participantId);
-    return participant?.name || `User ${participantId}`;
+    const participant = selectedTournament.players?.find((p) => p._id === participantId);
+    return participant?.username || `User ${participantId}`;
   };
 
   const handleExport = async (format: 'csv' | 'json') => {
@@ -229,32 +231,35 @@ const Tournaments = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50 text-xs sm:text-sm">
-                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('json')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105 text-xs sm:text-sm">
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Create Tournament</span>
-                  <span className="sm:hidden">Create</span>
-                </Button>
-              </DialogTrigger>
+            {user?.role === 'admin' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/50 text-xs sm:text-sm">
+                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('json')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {user?.role === 'admin' && (
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-accent via-accent to-primary hover:from-accent/90 hover:to-primary/90 font-semibold neon-glow-accent hover:scale-105 text-xs sm:text-sm">
+                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Create Tournament</span>
+                    <span className="sm:hidden">Create</span>
+                  </Button>
+                </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Tournament</DialogTitle>
@@ -369,6 +374,7 @@ const Tournaments = () => {
               </form>
             </DialogContent>
           </Dialog>
+            )}
           </div>
         </div>
 
@@ -382,18 +388,19 @@ const Tournaments = () => {
         </Tabs>
 
         <div className="border-2 rounded-xl shadow-lg overflow-hidden bg-card/80 backdrop-blur-sm">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead>Tournament Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Players</TableHead>
-                <TableHead>Entry Cost</TableHead>
-                <TableHead>Prize Pool</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Participants</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="min-w-[150px]">Tournament Name</TableHead>
+                <TableHead className="min-w-[80px]">Type</TableHead>
+                <TableHead className="min-w-[80px]">Players</TableHead>
+                <TableHead className="min-w-[100px]">Entry Cost</TableHead>
+                <TableHead className="min-w-[100px]">Prize Pool</TableHead>
+                <TableHead className="min-w-[100px]">Status</TableHead>
+                <TableHead className="min-w-[100px]">Participants</TableHead>
+                <TableHead className="min-w-[120px] hidden md:table-cell">Start Date</TableHead>
+                <TableHead className="min-w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -422,11 +429,11 @@ const Tournaments = () => {
                 </TableRow>
               ) : (
                 tournaments.map((tournament) => (
-                  <TableRow key={tournament.id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
+                  <TableRow key={tournament._id} className="hover:bg-primary/5 transition-all duration-200 border-b border-border/30">
                     <TableCell className="font-medium">{tournament.name}</TableCell>
                     <TableCell>
                       <Badge variant={tournament.type === 'public' ? 'default' : 'secondary'}>
-                        {tournament.type}
+                        {tournament.type || 'public'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -435,11 +442,11 @@ const Tournaments = () => {
                         <span>{tournament.maxPlayers}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{tournament.entryCost} coins</TableCell>
+                    <TableCell>{tournament.entryFee} coins</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Trophy className="h-3.5 w-3.5 text-accent" />
-                        <span>{tournament.prizePool} coins</span>
+                        <span>{(tournament as any).prizePool || 0} coins</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -448,29 +455,31 @@ const Tournaments = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {tournament.participantCount ?? (tournament.players?.length ?? 0)}/{tournament.maxPlayers}
+                      {tournament.players?.length || 0}/{tournament.maxPlayers}
                     </TableCell>
                     <TableCell>
-                      {tournament.startDate ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          {new Date(tournament.startDate).toLocaleDateString()}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
+                      <div className="hidden md:table-cell">
+                        {tournament.startDate ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                            {new Date(tournament.startDate).toLocaleDateString()}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleViewTournament(tournament.id)}
+                          onClick={() => handleViewTournament(tournament._id)}
                           title="View details"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {tournament.status !== 'completed' && tournament.status !== 'cancelled' && (
+                        {user?.role === 'admin' && tournament.status !== 'completed' && tournament.status !== 'cancelled' && (
                           <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                             <AlertDialogTrigger asChild>
                               <Button
@@ -489,13 +498,13 @@ const Tournaments = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Cancel Tournament</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will cancel "{selectedTournament?.name}" and refund all {selectedTournament?.participantCount ?? selectedTournament?.players?.length ?? 0} participants.
+                                  This will cancel "{selectedTournament?.name}" and refund all {selectedTournament?.players?.length ?? 0} participants.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Keep Tournament</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => selectedTournament && handleCancelTournament(selectedTournament.id)}
+                                  onClick={() => selectedTournament && handleCancelTournament(selectedTournament._id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Cancel Tournament
@@ -511,6 +520,7 @@ const Tournaments = () => {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
 
         {/* View Tournament Details Dialog */}
@@ -521,7 +531,7 @@ const Tournaments = () => {
               <DialogDescription>
                 {selectedTournament && (
                   <>
-                    {selectedTournament.maxPlayers}-player tournament • Prize: {selectedTournament.prizePool} coins (80% to champion)
+                    {selectedTournament.maxPlayers}-player tournament • Prize: {(selectedTournament as any).prizePool || 0} coins (80% to champion)
                   </>
                 )}
               </DialogDescription>
@@ -539,27 +549,27 @@ const Tournaments = () => {
                     <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground">Participants</div>
                     <div className="text-lg font-bold mt-1">
-                      {selectedTournament.participantCount ?? (selectedTournament.players?.length ?? 0)}/{selectedTournament.maxPlayers}
+                      {selectedTournament.players?.length || 0}/{selectedTournament.maxPlayers}
                     </div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground">Entry Cost</div>
-                    <div className="text-lg font-bold mt-1">{selectedTournament.entryCost} coins</div>
+                    <div className="text-lg font-bold mt-1">{selectedTournament.entryFee} coins</div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground">Prize Pool</div>
-                    <div className="text-lg font-bold mt-1">{selectedTournament.prizePool} coins</div>
+                    <div className="text-lg font-bold mt-1">{(selectedTournament as any).prizePool || 0} coins</div>
                   </div>
                 </div>
 
                 {/* Participants List */}
-                {selectedTournament.participants && selectedTournament.participants.length > 0 && (
+                {selectedTournament.players && selectedTournament.players.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-3">Participants</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {selectedTournament.participants.map((participant, index: number) => (
-                        <div key={participant.id || index} className="p-2 bg-muted rounded text-sm">
-                          {participant.name || `Player ${index + 1}`}
+                      {selectedTournament.players.map((participant, index: number) => (
+                        <div key={participant._id || `participant-${index}`} className="p-2 bg-muted rounded text-sm">
+                          {participant.username || `Player ${index + 1}`}
                         </div>
                       ))}
                     </div>
@@ -567,16 +577,16 @@ const Tournaments = () => {
                 )}
 
                 {/* Bracket View */}
-                {selectedTournament.bracket && selectedTournament.bracket.rounds && (
+                {(selectedTournament as any).bracket && (selectedTournament as any).bracket.rounds && (
                   <div>
                     <h3 className="font-semibold mb-3">Tournament Bracket</h3>
                     <div className="space-y-4">
-                      {selectedTournament.bracket.rounds.map((round, roundIdx: number) => (
-                        <div key={roundIdx} className="border rounded-lg p-4">
+                      {(selectedTournament as any).bracket.rounds.map((round: any, roundIdx: number) => (
+                        <div key={`round-${round.roundNumber || roundIdx}`} className="border rounded-lg p-4">
                           <div className="font-medium mb-3">{round.roundNumber ? `Round ${round.roundNumber}` : `Round ${roundIdx + 1}`}</div>
                           <div className="grid gap-3">
-                            {round.matches.map((match, matchIdx: number) => (
-                              <div key={matchIdx} className="p-3 bg-muted rounded-lg">
+                            {round.matches.map((match: any, matchIdx: number) => (
+                              <div key={`match-${roundIdx}-${matchIdx}-${match.player1Id || ''}-${match.player2Id || ''}`} className="p-3 bg-muted rounded-lg">
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1">
                                     <div className="text-sm">
@@ -593,7 +603,7 @@ const Tournaments = () => {
                                     <Badge variant={match.status === 'completed' ? 'secondary' : 'default'}>
                                       {match.status}
                                     </Badge>
-                                    {match.status === 'pending' && match.player1Id && match.player2Id && (
+                                    {match.status === 'pending' && match.player1Id && match.player2Id && user?.role === 'admin' && (
                                       <Button
                                         size="sm"
                                         variant="outline"
@@ -615,13 +625,13 @@ const Tournaments = () => {
                 )}
 
                 {/* Winner */}
-                {(selectedTournament.winnerId || selectedTournament.champion) && (
+                {(selectedTournament.champion || (selectedTournament as any).winnerId) && (
                   <div className="p-4 bg-success/10 rounded-lg border border-success/20">
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-success" />
                       <div>
                         <div className="font-semibold text-success">Tournament Champion</div>
-                        <div className="text-sm">{selectedTournament.winnerName || selectedTournament.championName || getParticipantName(selectedTournament.winnerId || selectedTournament.champion || '')}</div>
+                        <div className="text-sm">{selectedTournament.champion?.username || getParticipantName(selectedTournament.champion?._id || (selectedTournament as any).winnerId || '')}</div>
                       </div>
                     </div>
                   </div>
@@ -643,7 +653,8 @@ const Tournaments = () => {
             {selectedTournament && matchData.roundNumber > 0 && (
               <form onSubmit={handleSubmitMatchResult} className="space-y-4">
                 {(() => {
-                  const round = selectedTournament?.bracket?.rounds?.find((r) => r.roundNumber === matchData.roundNumber);
+                  const bracket = (selectedTournament as any)?.bracket;
+                  const round = bracket?.rounds?.find((r: any) => r.roundNumber === matchData.roundNumber);
                   const match = round?.matches?.[matchData.matchIndex];
                   if (!match) return null;
 

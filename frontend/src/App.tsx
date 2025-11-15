@@ -8,6 +8,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Login from "./pages/Login";
+import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Matches from "./pages/Matches";
@@ -40,11 +41,12 @@ const App = () => (
             >
               <Routes>
                 <Route path="/" element={<Login />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute requireAdmin><Users /></ProtectedRoute>} />
                 <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
                 <Route path="/tournaments" element={<ProtectedRoute><Tournaments /></ProtectedRoute>} />
-                <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+                <Route path="/transactions" element={<ProtectedRoute requireAdmin><Transactions /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

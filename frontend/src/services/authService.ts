@@ -67,5 +67,71 @@ export const authService = {
       localStorage.removeItem(STORAGE_KEYS.TOKEN);
       return { success: true };
     }
+  },
+
+  verifyEmail: async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.error || 'Email verification failed'
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Email verified successfully'
+      };
+    } catch (error) {
+      logger.error('Verify email error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
+      };
+    }
+  },
+
+  resendVerification: async (email: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.error || 'Failed to resend verification email'
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Verification email sent successfully',
+        token: data.token, // Only in development
+        verificationLink: data.verificationLink // Only in development
+      };
+    } catch (error) {
+      logger.error('Resend verification error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
+      };
+    }
   }
 };
