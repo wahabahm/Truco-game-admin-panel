@@ -133,5 +133,70 @@ export const authService = {
         message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
       };
     }
+  },
+
+  sendOTP: async (email: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.error || 'Failed to send OTP'
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'OTP sent successfully'
+      };
+    } catch (error) {
+      logger.error('Send OTP error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
+      };
+    }
+  },
+
+  verifyOTP: async (email: string, otp: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.error || 'OTP verification failed'
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'OTP verified successfully',
+        user: data.user
+      };
+    } catch (error) {
+      logger.error('Verify OTP error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
+      };
+    }
   }
 };

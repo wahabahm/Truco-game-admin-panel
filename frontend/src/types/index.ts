@@ -14,7 +14,7 @@ export interface UserDto {
   username: string;
   email: string;
   role: string;
-  avatar: string | null;
+  avatar: string; // Non-nullable to match C# structure
   emailVerified: boolean;
   wallet: WalletDto;
   stats: StatsDto;
@@ -117,6 +117,11 @@ export interface EmailBodyRequest {
 
 export interface OTPRequest {
   otp: string;
+  email?: string; // Optional - if not provided, user will be found by OTP code
+}
+
+export interface SendOTPRequest {
+  email: string;
 }
 
 export interface RegisterResponse {
