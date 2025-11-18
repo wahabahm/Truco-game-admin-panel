@@ -1,48 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy } from 'lucide-react';
+import { UserPlus, Mail, Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
-const Login = () => {
+const Register = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Validation
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const success = await login(email, password);
-      if (success) {
-        // Get user from auth context after login
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (currentUser.role === 'admin') {
-          toast.success('Login successful!');
-          navigate('/dashboard');
-        } else {
-          toast.success('Login successful!');
-          navigate('/dashboard');
-        }
+      const result = await authService.register(name, email, password);
+      
+      if (result.success) {
+        toast.success('Registration successful! Please verify your email.');
+        // Redirect to verify email page
+        navigate('/verify-email', { 
+          state: { email },
+          replace: true 
+        });
       } else {
-        toast.error('Invalid credentials');
+        toast.error(result.message || 'Registration failed');
       }
     } catch (error) {
-      toast.error('An error occurred during login');
+      toast.error('An error occurred during registration');
+      logger.error('Registration error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -64,42 +71,87 @@ const Login = () => {
           <div className="relative mb-2">
             <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full animate-pulse-glow"></div>
             <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300 ring-4 ring-primary/30 float">
-              <Trophy className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+              <UserPlus className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
             </div>
           </div>
           <CardTitle className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent mt-6 tracking-tight">
-            Truco Admin Panel
+            Create Account
           </CardTitle>
           <CardDescription className="text-center text-sm sm:text-base mt-2 text-muted-foreground">
-            Enter your credentials to access the admin dashboard
+            Register as a new player and get 100 coins free!
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
+                autoComplete="name"
+                placeholder="Enter your full name"
+                required
+                minLength={2}
+                maxLength={255}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
-                // placeholder="admin@truco.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
                 autoComplete="email"
+                placeholder="Enter your email address"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
-                // placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
-                autoComplete="current-password"
+                autoComplete="new-password"
+                placeholder="Enter password (min 6 characters)"
                 required
+                minLength={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Password must be at least 6 characters long
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Confirm Password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
+                autoComplete="new-password"
+                placeholder="Confirm your password"
+                required
+                minLength={6}
               />
             </div>
             <Button 
@@ -110,30 +162,25 @@ const Login = () => {
               {isLoading ? (
                 <>
                   <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                  Logging in...
+                  Registering...
                 </>
               ) : (
-                'Sign In'
+                'Create Account'
               )}
             </Button>
             <div className="text-center text-sm text-muted-foreground mt-4">
-              Don't have an account?{' '}
+              Already have an account?{' '}
               <Link 
-                to="/register" 
+                to="/" 
                 className="text-primary hover:text-primary/80 font-semibold underline underline-offset-4 transition-colors"
               >
-                Register Now
+                Sign In
               </Link>
             </div>
-            {import.meta.env.DEV && (
-              <div className="text-xs text-center text-muted-foreground mt-4 p-4 bg-muted/30 rounded-xl border border-border/50">
-                <strong className="text-foreground">Demo credentials (dev only):</strong>
-                <div className="mt-2 space-y-1">
-                  <div className="font-mono text-sm"></div>
-                  <div className="font-mono text-sm"></div>
-                </div>
-              </div>
-            )}
+            <div className="text-xs text-center text-muted-foreground mt-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+              <p className="font-semibold text-foreground mb-1">🎁 Welcome Bonus!</p>
+              <p>New players receive 100 coins upon registration</p>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -141,4 +188,5 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
+

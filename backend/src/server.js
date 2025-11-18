@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -9,6 +10,7 @@ import { connectDB } from './config/database.js';
 import { swaggerSpec, swaggerUi } from './config/swagger.js';
 import { validateEnv, getEnvConfig } from './utils/env.js';
 import { logger } from './utils/logger.js';
+import { initializeEmailService } from './utils/emailService.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import matchRoutes from './routes/match.routes.js';
@@ -26,6 +28,12 @@ dotenv.config({ path: join(__dirname, '../.env') });
 // Validate environment variables
 validateEnv();
 const envConfig = getEnvConfig();
+
+// Initialize email service if SMTP is configured
+if (process.env.SMTP_HOST) {
+  logger.info('📧 Initializing email service...');
+  initializeEmailService();
+}
 
 const app = express();
 const PORT = envConfig.port;
@@ -66,30 +74,31 @@ app.use(helmet({
 // CORS configuration with proper preflight handling
 const corsOptions = {
   origin: (origin, callback) => {
+    // In development mode, allow all origins for easier testing
+    if (envConfig.nodeEnv === 'development') {
+      return callback(null, true);
+    }
+    
+    // Production mode: use strict origin checking
     const allowedOrigins = getAllowedOrigins();
     
-    // Allow requests with no origin only in development (for tools like Postman)
-    // In production, reject requests without origin for security
+    // Reject requests with no origin in production (security)
     if (!origin) {
-      if (envConfig.nodeEnv === 'development') {
-        return callback(null, true);
-      } else {
-        logger.warn('CORS blocked: Request with no origin in production');
-        return callback(new Error('Not allowed by CORS'));
-      }
+      logger.warn('CORS blocked: Request with no origin in production');
+      return callback(new Error('Not allowed by CORS'));
     }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Log blocked origin with allowed origins for debugging
-      logger.warn(`CORS blocked origin: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
-      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
+      // Log blocked origin (don't expose allowed origins in production)
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-XSRF-TOKEN'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -102,6 +111,7 @@ app.use(cors());
 app.options('*', cors());
 
 app.use(morgan('dev'));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -147,10 +157,19 @@ app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Error handling middleware
+// Error handling middleware - Unity requires {error: "message"} format
 app.use((err, req, res, next) => {
   logger.error('Error middleware:', err);
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+  
+  // For Unity client, return error in {error: "message"} format for specific status codes
+  if ([400, 401, 403, 500].includes(status)) {
+    return res.status(status).json({
+      error: err.message || 'Internal Server Error'
+    });
+  }
+  
+  res.status(status).json({
     success: false,
     message: err.message || 'Internal Server Error',
     ...(envConfig.nodeEnv === 'development' && { stack: err.stack })
@@ -160,8 +179,7 @@ app.use((err, req, res, next) => {
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
-    success: false,
-    message: 'Route not found'
+    error: 'Route not found'
   });
 });
 
@@ -173,7 +191,7 @@ const startServer = async () => {
     app.listen(PORT, HOST, () => {
       logger.info(`🚀 Server running on ${HOST}:${PORT}`);
       logger.info(`📊 Environment: ${envConfig.nodeEnv}`);
-      logger.info(`🌐 Allowed CORS origins: ${getAllowedOrigins().join(', ')}`);
+      logger.info(`🌐 CORS Mode: ${envConfig.nodeEnv === 'development' ? 'DEVELOPMENT (All origins allowed)' : 'PRODUCTION (Restricted)'}`);
       logger.info(`📚 Swagger API Docs: http://${HOST}:${PORT}/api-docs`);
     });
   } catch (error) {

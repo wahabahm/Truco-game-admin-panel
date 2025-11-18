@@ -11,6 +11,11 @@ const tournamentSchema = new mongoose.Schema({
     trim: true,
     maxlength: 255
   },
+  description: {
+    type: String,
+    default: '',
+    trim: true
+  },
   type: {
     type: String,
     enum: ['public', 'private'],
@@ -40,6 +45,10 @@ const tournamentSchema = new mongoose.Schema({
     max: 100
   },
   startDate: {
+    type: Date,
+    default: null
+  },
+  endDate: {
     type: Date,
     default: null
   },
@@ -74,6 +83,10 @@ const tournamentSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
     default: null
+  },
+  prizeDistributed: {
+    type: Boolean,
+    default: false
   },
   cancelledAt: {
     type: Date,

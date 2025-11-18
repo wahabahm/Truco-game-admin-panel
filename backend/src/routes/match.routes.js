@@ -3,9 +3,11 @@ import { body, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import Match from '../models/Match.js';
 import User from '../models/User.js';
+import Tournament from '../models/Tournament.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
 import { logger } from '../utils/logger.js';
+import { transformMatchToDto, transformUserToDto } from '../utils/dtoTransformers.js';
 
 const router = express.Router();
 
@@ -61,33 +63,15 @@ router.get('/', async (req, res) => {
     }
 
     const matches = await Match.find(query)
-      .populate('player1Id', 'name email')
-      .populate('player2Id', 'name email')
-      .populate('winnerId', 'name email')
+      .populate('player1Id')
+      .populate('player2Id')
+      .populate('winnerId')
+      .populate('tournamentId')
       .sort({ createdAt: -1 })
       .lean();
 
-    const formattedMatches = matches.map(match => {
-      const players = (match.player1Id ? 1 : 0) + (match.player2Id ? 1 : 0);
-      return {
-        id: match._id.toString(),
-        name: match.name,
-        type: match.type,
-        cost: match.cost,
-        prize: match.prize,
-        matchDate: match.matchDate,
-        status: match.status,
-        players,
-        player1Id: match.player1Id?._id?.toString() || null,
-        player2Id: match.player2Id?._id?.toString() || null,
-        winnerId: match.winnerId?._id?.toString() || null,
-        player1Name: match.player1Id?.name || null,
-        player2Name: match.player2Id?.name || null,
-        winnerName: match.winnerId?.name || null,
-        createdAt: match.createdAt,
-        completedAt: match.completedAt
-      };
-    });
+    // Transform to MatchDto format
+    const formattedMatches = matches.map(match => transformMatchToDto(match, Tournament, User));
 
     res.json({
       success: true,
@@ -275,9 +259,10 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     const match = await Match.findById(id)
-      .populate('player1Id', 'name email coins')
-      .populate('player2Id', 'name email coins')
-      .populate('winnerId', 'name email')
+      .populate('player1Id')
+      .populate('player2Id')
+      .populate('winnerId')
+      .populate('tournamentId')
       .lean();
 
     if (!match) {
@@ -287,30 +272,12 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    const players = (match.player1Id ? 1 : 0) + (match.player2Id ? 1 : 0);
+    // Transform to MatchDto format
+    const matchDto = transformMatchToDto(match, Tournament, User);
 
     res.json({
       success: true,
-      match: {
-        id: match._id.toString(),
-        name: match.name,
-        type: match.type,
-        cost: match.cost,
-        prize: match.prize,
-        matchDate: match.matchDate,
-        status: match.status,
-        players,
-        player1Id: match.player1Id?._id?.toString() || null,
-        player2Id: match.player2Id?._id?.toString() || null,
-        winnerId: match.winnerId?._id?.toString() || null,
-        player1Name: match.player1Id?.name || null,
-        player2Name: match.player2Id?.name || null,
-        winnerName: match.winnerId?.name || null,
-        player1Email: match.player1Id?.email || null,
-        player2Email: match.player2Id?.email || null,
-        createdAt: match.createdAt,
-        completedAt: match.completedAt
-      }
+      match: matchDto
     });
   } catch (error) {
     logger.error('Get match error:', error);
@@ -418,19 +385,12 @@ router.post('/', requireAdmin, [
       status: 'active'
     });
 
+    // Transform to MatchDto format
+    const matchDto = transformMatchToDto(match.toObject(), Tournament, User);
+
     res.status(201).json({
       success: true,
-      match: {
-        id: match._id.toString(),
-        name: match.name,
-        type: match.type,
-        cost: match.cost,
-        prize: match.prize,
-        matchDate: match.matchDate,
-        status: match.status,
-        players: 0,
-        createdAt: match.createdAt
-      }
+      match: matchDto
     });
   } catch (error) {
     logger.error('Create match error:', error);
@@ -549,6 +509,10 @@ router.post('/auto-join', async (req, res) => {
         throw new Error(`Insufficient coins. You need ${availableMatch.cost} coins to join this match.`);
       }
 
+      // Track balance before transaction
+      const balanceBefore = user.coins;
+      const balanceAfter = balanceBefore - availableMatch.cost;
+
       // Deduct coins atomically
       await User.findByIdAndUpdate(
         userId,
@@ -556,12 +520,14 @@ router.post('/auto-join', async (req, res) => {
         { session }
       );
 
-      // Log transaction
+      // Log transaction with balance tracking
       await Transaction.create([{
         userId: user._id,
         type: 'match_entry',
         amount: -availableMatch.cost,
         description: `Entry fee for match: ${availableMatch.name}`,
+        balanceBefore: balanceBefore,
+        balanceAfter: balanceAfter,
         matchId: availableMatch._id
       }], { session });
     });
@@ -575,8 +541,9 @@ router.post('/auto-join', async (req, res) => {
         { player2Id: userIdObj }
       ]
     })
-      .populate('player1Id', 'name email')
-      .populate('player2Id', 'name email')
+      .populate('player1Id')
+      .populate('player2Id')
+      .populate('tournamentId')
       .sort({ createdAt: -1 })
       .limit(1);
 
@@ -587,21 +554,13 @@ router.post('/auto-join', async (req, res) => {
       });
     }
 
+    // Transform to MatchDto format
+    const matchDto = transformMatchToDto(joinedMatch.toObject(), Tournament, User);
+
     res.json({
       success: true,
       message: 'Successfully joined match!',
-      match: {
-        id: joinedMatch._id.toString(),
-        name: joinedMatch.name,
-        type: joinedMatch.type,
-        cost: joinedMatch.cost,
-        prize: joinedMatch.prize,
-        status: joinedMatch.status,
-        player1Id: joinedMatch.player1Id?._id?.toString() || null,
-        player2Id: joinedMatch.player2Id?._id?.toString() || null,
-        player1Name: joinedMatch.player1Id?.name || null,
-        player2Name: joinedMatch.player2Id?.name || null
-      }
+      match: matchDto
     });
   } catch (error) {
     logger.error('Auto-join match error:', error);
@@ -739,15 +698,21 @@ router.post('/:id/join', async (req, res) => {
     const updateField = !match.player1Id ? 'player1Id' : 'player2Id';
     await Match.findByIdAndUpdate(id, { $set: { [updateField]: userId } });
 
+    // Track balance before transaction
+    const balanceBefore = user.coins;
+    const balanceAfter = balanceBefore - match.cost;
+
     // Deduct coins atomically
     await User.findByIdAndUpdate(userId, { $inc: { coins: -match.cost } });
 
-    // Log transaction
+    // Log transaction with balance tracking
     await Transaction.create({
       userId: user._id,
       type: 'match_entry',
       amount: -match.cost,
       description: `Entry fee for match: ${match.name}`,
+      balanceBefore: balanceBefore,
+      balanceAfter: balanceAfter,
       matchId: match._id
     });
 
@@ -883,18 +848,25 @@ router.post('/:id/result', requireAdmin, [
     match.completedAt = new Date();
     await match.save();
 
+    // Get winner's balance before prize
+    const winnerUser = await User.findById(winnerId);
+    const balanceBefore = winnerUser.coins;
+    const balanceAfter = balanceBefore + match.prize;
+
     // Update player stats and award prize (combined operations for efficiency)
     await User.findByIdAndUpdate(winnerId, { 
       $inc: { wins: 1, coins: match.prize } 
     });
     await User.findByIdAndUpdate(loserId, { $inc: { losses: 1 } });
 
-    // Log transaction
+    // Log transaction with balance tracking
     await Transaction.create({
       userId: winnerId,
       type: 'match_win',
       amount: match.prize,
       description: `Prize for winning match: ${match.name}`,
+      balanceBefore: balanceBefore,
+      balanceAfter: balanceAfter,
       matchId: match._id
     });
 

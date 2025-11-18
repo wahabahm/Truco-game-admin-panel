@@ -11,17 +11,24 @@ import { authService } from '@/services/authService';
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [token, setToken] = useState('');
+  const [otp, setOtp] = useState('');
   const [email, setEmail] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
 
-  const handleVerify = async (verifyToken?: string) => {
-    const tokenToVerify = verifyToken || token;
-    if (!tokenToVerify) {
-      setVerificationError('Please enter a verification token');
+  const handleVerify = async () => {
+    if (!email) {
+      setVerificationError('Please enter your email address');
+      return;
+    }
+    if (!otp) {
+      setVerificationError('Please enter the 6-digit OTP code');
+      return;
+    }
+    if (otp.length !== 6) {
+      setVerificationError('OTP must be 6 digits');
       return;
     }
 
@@ -29,7 +36,7 @@ const VerifyEmail = () => {
     setVerificationError('');
 
     try {
-      const result = await authService.verifyEmail(tokenToVerify);
+      const result = await authService.verifyEmail(email, otp);
       if (result.success) {
         setIsVerified(true);
         toast.success(result.message || 'Email verified successfully!');
@@ -47,16 +54,6 @@ const VerifyEmail = () => {
       setIsVerifying(false);
     }
   };
-
-  // Get token from URL query params
-  useEffect(() => {
-    const tokenFromUrl = searchParams.get('token');
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      handleVerify(tokenFromUrl);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
 
   const handleResend = async () => {
     if (!email) {
@@ -114,7 +111,7 @@ const VerifyEmail = () => {
           <CardDescription className="text-center text-sm sm:text-base mt-2 text-muted-foreground">
             {isVerified 
               ? 'Your email has been successfully verified. Redirecting to login...'
-              : 'Enter your verification token or email to resend verification'
+              : 'Enter your email and 6-digit OTP code to verify your email'
             }
           </CardDescription>
         </CardHeader>
@@ -128,17 +125,33 @@ const VerifyEmail = () => {
             </div>
           ) : (
             <div className="space-y-5">
-              {/* Verify Token Form */}
+              {/* Verify Email Form */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="token" className="text-sm font-medium">Verification Token</Label>
+                  <Label htmlFor="verify-email" className="text-sm font-medium">Email Address</Label>
                   <Input
-                    id="token"
-                    type="text"
-                    placeholder="Enter verification token from email"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
+                    id="verify-email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm"
+                    disabled={isVerifying}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="otp" className="text-sm font-medium">6-Digit OTP Code</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    placeholder="Enter 6-digit OTP from email"
+                    value={otp}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setOtp(value);
+                    }}
+                    maxLength={6}
+                    className="h-10 sm:h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20 text-sm text-center text-2xl font-bold tracking-widest"
                     disabled={isVerifying}
                   />
                   {verificationError && (
@@ -150,9 +163,9 @@ const VerifyEmail = () => {
                 </div>
                 <Button 
                   type="button"
-                  onClick={() => handleVerify()}
+                  onClick={handleVerify}
                   className="w-full h-11 sm:h-12 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-sm sm:text-base neon-glow hover:scale-105" 
-                  disabled={isVerifying || !token}
+                  disabled={isVerifying || !email || !otp || otp.length !== 6}
                 >
                   {isVerifying ? (
                     <>

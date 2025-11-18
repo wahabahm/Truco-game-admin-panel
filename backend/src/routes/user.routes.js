@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
 import { logger } from '../utils/logger.js';
+import { transformUserToDto } from '../utils/dtoTransformers.js';
 
 const router = express.Router();
 
@@ -79,20 +80,11 @@ router.get('/', async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select('id name email coins wins losses status createdAt')
       .sort({ createdAt: -1 })
       .lean();
 
-    const formattedUsers = users.map(user => ({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      coins: user.coins,
-      wins: user.wins,
-      losses: user.losses,
-      status: user.status,
-      createdAt: user.createdAt
-    }));
+    // Transform to UserDto format
+    const formattedUsers = users.map(user => transformUserToDto(user));
 
     res.json({
       success: true,
@@ -103,6 +95,151 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/register:
+ *   post:
+ *     summary: Register new player (Admin only)
+ *     description: Create a new player account. Only admins can register players through the admin panel. New players receive 100 coins by default.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 255
+ *                 example: John Doe
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: player@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 format: password
+ *                 example: password123
+ *     responses:
+ *       201:
+ *         description: Player registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Player registered successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error or email already exists
+ *       403:
+ *         description: Admin access required
+ */
+// Register new player (admin only) - MUST be before /:id route
+router.post('/register', requireAdmin, [
+  body('name').trim().isLength({ min: 2, max: 255 }).withMessage('Name must be between 2 and 255 characters'),
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { name, email, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+
+    // Hash password
+    const bcrypt = (await import('bcryptjs')).default;
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Generate 6-digit email verification OTP
+    const emailVerificationOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const emailVerificationTokenExpiry = new Date();
+    emailVerificationTokenExpiry.setMinutes(emailVerificationTokenExpiry.getMinutes() + 10); // 10 minutes expiry
+
+    // Create user
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      passwordHash,
+      role: 'player',
+      coins: 100, // Default 100 coins for new players
+      status: 'active',
+      emailVerificationToken: emailVerificationOTP,
+      emailVerificationTokenExpiry
+    });
+
+    // Log transaction for initial coins with balance tracking
+    await Transaction.create({
+      userId: user._id,
+      type: 'admin_add',
+      amount: 100,
+      description: 'Initial coins for new player registration',
+      balanceBefore: 0,
+      balanceAfter: 100
+    });
+
+    // Transform to UserDto format
+    const userDto = transformUserToDto(user.toObject());
+
+    // Log user registration (no sensitive data)
+    logger.info(`New player registered: ${user.email}`);
+
+    // Send verification email via email service (with OTP)
+    const { sendVerificationEmail } = await import('../utils/emailService.js');
+    await sendVerificationEmail(user.email, emailVerificationOTP, user.name);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Player registered successfully. Email verification required.',
+      user: userDto
+      // Token is never returned in production for security
+    });
+  } catch (error) {
+    logger.error('Admin register player error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server error during registration',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });
   }
 });
@@ -153,7 +290,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id).select('id name email coins wins losses status createdAt').lean();
+    const user = await User.findById(id).lean();
 
     if (!user) {
       return res.status(404).json({
@@ -162,18 +299,12 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Transform to UserDto format
+    const userDto = transformUserToDto(user);
+
     res.json({
       success: true,
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        coins: user.coins,
-        wins: user.wins,
-        losses: user.losses,
-        status: user.status,
-        createdAt: user.createdAt
-      }
+      user: userDto
     });
   } catch (error) {
     logger.error('Get user error:', error);
@@ -317,18 +448,13 @@ router.get('/:id/stats', requireAdmin, async (req, res) => {
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
     });
 
+    // Transform user to UserDto format
+    const userDto = transformUserToDto(user.toObject());
+
     res.json({
       success: true,
       stats: {
-        user: {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          coins: user.coins,
-          status: user.status,
-          role: user.role,
-          createdAt: user.createdAt
-        },
+        user: userDto,
         matches: {
           total: matchesPlayed,
           won: matchesWon,
@@ -415,6 +541,14 @@ router.patch('/:id/status', requireAdmin, [
 
     const { id } = req.params;
     const { status } = req.body;
+
+    // Prevent admin from suspending themselves
+    if (req.user.id === id && status === 'suspended') {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot suspend your own account'
+      });
+    }
 
     const user = await User.findByIdAndUpdate(
       id,
@@ -510,6 +644,14 @@ router.patch('/:id/coins', requireAdmin, [
     const { id } = req.params;
     const { amount, operation } = req.body;
 
+    // Prevent admin from managing their own coins
+    if (req.user.id === id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot manage your own coins'
+      });
+    }
+
     // Get current user
     const user = await User.findById(id);
     if (!user) {
@@ -519,30 +661,37 @@ router.patch('/:id/coins', requireAdmin, [
       });
     }
 
+    // Track balance before transaction
+    const balanceBefore = user.coins;
+    
     // Update coins atomically (prevents race conditions)
     const coinChange = operation === 'add' ? amount : -Math.min(amount, user.coins);
     const actualAmount = operation === 'add' ? amount : Math.min(amount, user.coins);
+    const balanceAfter = balanceBefore + coinChange;
+    
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { $inc: { coins: coinChange } },
       { new: true }
     );
 
-    // Log transaction (log actual amount changed)
+    // Log transaction with balance tracking
     await Transaction.create({
       userId: user._id,
       type: operation === 'add' ? 'admin_add' : 'admin_remove',
       amount: operation === 'add' ? actualAmount : -actualAmount,
-      description: `Admin ${operation === 'add' ? 'added' : 'removed'} ${actualAmount} coins`
+      description: `Admin ${operation === 'add' ? 'added' : 'removed'} ${actualAmount} coins`,
+      balanceBefore: balanceBefore,
+      balanceAfter: balanceAfter
     });
+
+    // Transform to UserDto format
+    const userDto = transformUserToDto(updatedUser.toObject());
 
     res.json({
       success: true,
       message: `Coins ${operation === 'add' ? 'added' : 'removed'} successfully`,
-      user: {
-        id: updatedUser._id.toString(),
-        coins: updatedUser.coins
-      }
+      user: userDto
     });
   } catch (error) {
     logger.error('Update coins error:', error);

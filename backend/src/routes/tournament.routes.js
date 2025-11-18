@@ -8,6 +8,7 @@ import Transaction from '../models/Transaction.js';
 import { generateBracket, progressToNextRound } from '../utils/bracketGenerator.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
 import { logger } from '../utils/logger.js';
+import { transformTournamentToDto, transformUserToDto, transformMatchToDto } from '../utils/dtoTransformers.js';
 
 const router = express.Router();
 
@@ -60,34 +61,15 @@ router.get('/', async (req, res) => {
     }
 
     const tournaments = await Tournament.find(query)
-      .populate('participants', 'name email')
-      .populate('winnerId', 'name email')
+      .populate('participants')
+      .populate('winnerId')
       .sort({ createdAt: -1 })
       .lean();
 
-    const formattedTournaments = tournaments.map(tournament => ({
-      id: tournament._id.toString(),
-      name: tournament.name,
-      type: tournament.type,
-      maxPlayers: tournament.maxPlayers,
-      entryCost: tournament.entryCost,
-      prizePool: tournament.prizePool,
-      startDate: tournament.startDate,
-      status: tournament.status,
-      participants: tournament.participants?.map(p => ({
-        id: p._id?.toString() || p.toString(),
-        name: p.name || 'Unknown',
-        email: p.email || 'Unknown'
-      })) || [],
-      participantCount: tournament.participants?.length || 0,
-      currentRound: tournament.currentRound,
-      winnerId: tournament.winnerId?._id?.toString() || tournament.winnerId?.toString() || null,
-      winnerName: tournament.winnerId?.name || null,
-      completedAt: tournament.completedAt,
-      cancelledAt: tournament.cancelledAt,
-      cancellationReason: tournament.cancellationReason,
-      createdAt: tournament.createdAt
-    }));
+    // Transform to TournamentDto format
+    const formattedTournaments = await Promise.all(
+      tournaments.map(tournament => transformTournamentToDto(tournament, Match, User))
+    );
 
     res.json({
       success: true,
@@ -286,8 +268,8 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const tournament = await Tournament.findById(id)
-      .populate('participants', 'name email coins')
-      .populate('winnerId', 'name email')
+      .populate('participants')
+      .populate('winnerId')
       .lean();
 
     if (!tournament) {
@@ -297,30 +279,12 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Transform to TournamentDto format
+    const tournamentDto = await transformTournamentToDto(tournament, Match, User);
+
     res.json({
       success: true,
-      tournament: {
-        id: tournament._id.toString(),
-        name: tournament.name,
-        type: tournament.type,
-        maxPlayers: tournament.maxPlayers,
-        entryCost: tournament.entryCost,
-        prizePool: tournament.prizePool,
-        startDate: tournament.startDate,
-        status: tournament.status,
-        participants: tournament.participants?.map(p => ({
-          id: p._id?.toString() || p.toString(),
-          name: p.name || 'Unknown',
-          email: p.email || 'Unknown'
-        })) || [],
-        participantCount: tournament.participants?.length || 0,
-        bracket: tournament.bracket,
-        currentRound: tournament.currentRound,
-        winnerId: tournament.winnerId?._id?.toString() || tournament.winnerId?.toString() || null,
-        winnerName: tournament.winnerId?.name || null,
-        completedAt: tournament.completedAt,
-        createdAt: tournament.createdAt
-      }
+      tournament: tournamentDto
     });
   } catch (error) {
     logger.error('Get tournament error:', error);
@@ -361,7 +325,7 @@ router.get('/:id/players', async (req, res) => {
     const { id } = req.params;
 
     const tournament = await Tournament.findById(id)
-      .populate('participants', 'name email coins wins losses status')
+      .populate('participants')
       .lean();
 
     if (!tournament) {
@@ -371,18 +335,13 @@ router.get('/:id/players', async (req, res) => {
       });
     }
 
+    // Transform players to UserDto format
+    const players = tournament.participants?.map(p => transformUserToDto(p)) || [];
+
     res.json({
       success: true,
-      players: tournament.participants?.map(p => ({
-        id: p._id?.toString() || p.toString(),
-        name: p.name || 'Unknown',
-        email: p.email || 'Unknown',
-        coins: p.coins || 0,
-        wins: p.wins || 0,
-        losses: p.losses || 0,
-        status: p.status || 'active'
-      })) || [],
-      totalPlayers: tournament.participants?.length || 0,
+      players: players,
+      totalPlayers: players.length,
       maxPlayers: tournament.maxPlayers
     });
   } catch (error) {
@@ -455,11 +414,13 @@ router.get('/:id/players', async (req, res) => {
  */
 router.post('/', requireAdmin, [
   body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required'),
+  body('description').optional().trim(),
   body('type').isIn(['public', 'private']).withMessage('Type must be public or private'),
   body('maxPlayers').isIn([4, 8]).withMessage('Max players must be 4 or 8'),
   body('entryCost').isInt({ min: 1 }).withMessage('Entry cost must be a positive integer'),
   body('prizePool').isInt({ min: 1 }).withMessage('Prize pool must be a positive integer'),
-  body('startDate').optional().isISO8601().withMessage('Invalid date format')
+  body('startDate').optional().isISO8601().withMessage('Invalid date format'),
+  body('endDate').optional().isISO8601().withMessage('Invalid date format')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -471,7 +432,7 @@ router.post('/', requireAdmin, [
       });
     }
 
-    const { name, type, maxPlayers, entryCost, prizePool, startDate } = req.body;
+    const { name, description, type, maxPlayers, entryCost, prizePool, startDate, endDate } = req.body;
 
     // Check for duplicate tournament name (server-side validation)
     const existingTournament = await Tournament.findOne({ name: name.trim() });
@@ -484,30 +445,22 @@ router.post('/', requireAdmin, [
 
     const tournament = await Tournament.create({
       name: name.trim(),
+      description: description || '',
       type,
       maxPlayers: parseInt(maxPlayers),
       entryCost: parseInt(entryCost),
       prizePool: parseInt(prizePool),
       startDate: startDate || null,
+      endDate: endDate || null,
       status: 'registration'
     });
 
+    // Transform to TournamentDto format
+    const tournamentDto = await transformTournamentToDto(tournament.toObject(), Match, User);
+
     res.status(201).json({
       success: true,
-      data: {
-        id: tournament._id.toString(),
-        name: tournament.name,
-        type: tournament.type,
-        maxPlayers: tournament.maxPlayers,
-        entryCost: tournament.entryCost,
-        prizePool: tournament.prizePool,
-        startDate: tournament.startDate,
-        status: tournament.status,
-        players: [],
-        participants: [],
-        participantCount: 0,
-        createdAt: tournament.createdAt
-      }
+      data: tournamentDto
     });
   } catch (error) {
     logger.error('Create tournament error:', error);
@@ -543,6 +496,18 @@ router.post('/', requireAdmin, [
  *     responses:
  *       200:
  *         description: Successfully joined tournament
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 coins:
+ *                   type: integer
+ *                   description: Remaining coins after joining tournament
+ *                   example: 900
  *       400:
  *         description: Tournament full, insufficient coins, or already registered
  *       404:
@@ -593,6 +558,10 @@ router.post('/:id/join', async (req, res) => {
         throw new Error('Insufficient coins');
       }
 
+      // Track balance before transaction
+      const balanceBefore = user.coins;
+      const balanceAfter = balanceBefore - tournament.entryCost;
+
       // Deduct coins (atomic operation)
       await User.findByIdAndUpdate(
         userId,
@@ -613,30 +582,27 @@ router.post('/:id/join', async (req, res) => {
 
       await tournament.save({ session });
 
-      // Log transaction
+      // Log transaction with balance tracking
       await Transaction.create([{
         userId: user._id,
         type: 'tournament_entry',
         amount: -tournament.entryCost,
         description: `Entry fee for tournament: ${tournament.name}`,
+        balanceBefore: balanceBefore,
+        balanceAfter: balanceAfter,
         matchId: null
       }], { session });
     });
 
-    // After transaction, get updated tournament
+    // After transaction, get updated user and tournament
     const { id } = req.params;
     const tournament = await Tournament.findById(id);
+    const updatedUser = await User.findById(userId).select('coins');
     
+    // Return EnterTournamentResponse format matching C# structure
     res.json({
-      success: true,
-      message: tournament.participants.length === tournament.maxPlayers 
-        ? 'Tournament is now full and has started!' 
-        : 'Successfully joined tournament',
-      tournament: {
-        id: tournament._id.toString(),
-        participantCount: tournament.participants.length,
-        status: tournament.status
-      }
+      ok: true,
+      coins: updatedUser.coins || 0
     });
   } catch (error) {
     logger.error('Join tournament error:', error);
@@ -665,6 +631,575 @@ router.post('/:id/join', async (req, res) => {
     });
   } finally {
     await session.endSession();
+  }
+});
+
+/**
+ * @swagger
+ * /api/tournaments/{id}/enter:
+ *   post:
+ *     summary: Enter tournament with player IDs
+ *     description: Register one or more players for a tournament using player IDs. Validates sufficient coins and prevents duplicate registration.
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - playerIds
+ *             properties:
+ *               playerIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of player user IDs to register
+ *                 example: ["user_id_1", "user_id_2"]
+ *     responses:
+ *       200:
+ *         description: Successfully entered tournament
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 coins:
+ *                   type: integer
+ *                   description: Remaining coins of the first player after entering tournament
+ *                   example: 900
+ *       400:
+ *         description: Tournament full, insufficient coins, or already registered
+ *       404:
+ *         description: Tournament not found
+ */
+// Enter tournament with player IDs
+router.post('/:id/enter', async (req, res) => {
+  const session = await mongoose.startSession();
+  
+  try {
+    const { id } = req.params;
+    const { playerIds } = req.body;
+
+    // Validate playerIds
+    if (!playerIds || !Array.isArray(playerIds) || playerIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'playerIds array is required and must not be empty'
+      });
+    }
+
+    // Validate all player IDs are valid MongoDB ObjectIds
+    const invalidIds = playerIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid player IDs found',
+        invalidIds: invalidIds
+      });
+    }
+
+    let firstPlayerCoins = 0;
+
+    await session.withTransaction(async () => {
+      // Get tournament with session for transaction
+      const tournament = await Tournament.findById(id).session(session);
+      if (!tournament) {
+        throw new Error('Tournament not found');
+      }
+
+      // Validation: Check tournament status
+      if (tournament.status !== 'registration') {
+        throw new Error('Tournament is not accepting registrations');
+      }
+
+      // Validation: Check if tournament has enough space
+      const availableSlots = tournament.maxPlayers - tournament.participants.length;
+      if (playerIds.length > availableSlots) {
+        throw new Error(`Tournament only has ${availableSlots} available slot(s), but ${playerIds.length} player(s) provided`);
+      }
+
+      // Convert playerIds to ObjectIds
+      const playerObjectIds = playerIds.map(pId => new mongoose.Types.ObjectId(pId));
+
+      // Validate all players exist
+      const players = await User.find({ _id: { $in: playerObjectIds } }).session(session);
+      if (players.length !== playerIds.length) {
+        throw new Error('One or more players not found');
+      }
+
+      // Check for duplicate players in request
+      const uniquePlayerIds = [...new Set(playerIds.map(id => id.toString()))];
+      if (uniquePlayerIds.length !== playerIds.length) {
+        throw new Error('Duplicate player IDs in request');
+      }
+
+      // Check if any player is already registered
+      const tournamentParticipantIds = tournament.participants.map(p => p.toString());
+      const alreadyRegistered = playerIds.filter(pId => tournamentParticipantIds.includes(pId.toString()));
+      if (alreadyRegistered.length > 0) {
+        throw new Error(`Player(s) already registered: ${alreadyRegistered.join(', ')}`);
+      }
+
+      // Validate all players have sufficient coins
+      const insufficientCoinsPlayers = players.filter(p => p.coins < tournament.entryCost);
+      if (insufficientCoinsPlayers.length > 0) {
+        const playerNames = insufficientCoinsPlayers.map(p => p.name || p.username || p._id.toString()).join(', ');
+        throw new Error(`Insufficient coins for player(s): ${playerNames}`);
+      }
+
+      // Process each player registration
+      for (let i = 0; i < players.length; i++) {
+        const player = players[i];
+        const playerId = playerObjectIds[i];
+
+        // Track balance before transaction
+        const balanceBefore = player.coins;
+        const balanceAfter = balanceBefore - tournament.entryCost;
+
+        // Deduct coins (atomic operation)
+        await User.findByIdAndUpdate(
+          playerId,
+          { $inc: { coins: -tournament.entryCost } },
+          { session }
+        );
+
+        // Add player to tournament (atomic operation)
+        tournament.participants.push(playerId);
+
+        // Log transaction with balance tracking
+        await Transaction.create([{
+          userId: player._id,
+          type: 'tournament_entry',
+          amount: -tournament.entryCost,
+          description: `Entry fee for tournament: ${tournament.name}`,
+          balanceBefore: balanceBefore,
+          balanceAfter: balanceAfter,
+          matchId: null
+        }], { session });
+
+        // Store first player's coins for response
+        if (i === 0) {
+          firstPlayerCoins = balanceAfter;
+        }
+      }
+
+      // If tournament is now full, generate bracket and start
+      if (tournament.participants.length === tournament.maxPlayers) {
+        const bracket = generateBracket(tournament.maxPlayers, tournament.participants);
+        tournament.bracket = bracket;
+        tournament.status = 'active';
+        tournament.currentRound = 1;
+      }
+
+      await tournament.save({ session });
+    });
+
+    // Return EnterTournamentResponse format matching C# structure
+    res.json({
+      ok: true,
+      coins: firstPlayerCoins
+    });
+  } catch (error) {
+    logger.error('Enter tournament error:', error);
+    const errorMessage = error.message || 'Server error';
+    
+    if (errorMessage === 'Tournament not found') {
+      return res.status(404).json({
+        success: false,
+        message: errorMessage
+      });
+    }
+    
+    if (errorMessage.includes('Tournament is full') || 
+        errorMessage.includes('already registered') ||
+        errorMessage.includes('Insufficient coins') ||
+        errorMessage.includes('not accepting registrations') ||
+        errorMessage.includes('available slot') ||
+        errorMessage.includes('not found') ||
+        errorMessage.includes('Duplicate')) {
+      return res.status(400).json({
+        success: false,
+        message: errorMessage
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  } finally {
+    await session.endSession();
+  }
+});
+
+/**
+ * @swagger
+ * /api/tournaments/{id}/create-match:
+ *   post:
+ *     summary: Create a match in tournament (Admin only)
+ *     description: Create a match within a tournament with specified participants, entry fee, and game type
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - participants
+ *               - entryFee
+ *               - gameType
+ *             properties:
+ *               participants:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of participant user IDs (typically 2 for a match)
+ *                 example: ["user_id_1", "user_id_2"]
+ *               entryFee:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Entry fee for the match
+ *                 example: 50
+ *               gameType:
+ *                 type: string
+ *                 description: Type of game/match
+ *                 example: "1v1"
+ *     responses:
+ *       200:
+ *         description: Match created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 match:
+ *                   $ref: '#/components/schemas/Match'
+ *       400:
+ *         description: Validation error or invalid participants
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Tournament not found
+ */
+// Create tournament match
+router.post('/:id/create-match', requireAdmin, [
+  body('participants').isArray({ min: 1 }).withMessage('Participants array is required'),
+  body('participants.*').custom((value) => {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+      throw new Error('Each participant must be a valid user ID');
+    }
+    return true;
+  }),
+  body('entryFee').isInt({ min: 1 }).withMessage('Entry fee must be a positive integer'),
+  body('gameType').notEmpty().withMessage('Game type is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const { participants, entryFee, gameType } = req.body;
+
+    // Find tournament
+    const tournament = await Tournament.findById(id);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found'
+      });
+    }
+
+    // Validate participants (should be 2 for a match)
+    if (participants.length !== 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'A match requires exactly 2 participants'
+      });
+    }
+
+    // Convert participants to ObjectIds
+    const participantObjectIds = participants.map(pId => new mongoose.Types.ObjectId(pId));
+
+    // Validate participants exist and are in tournament
+    const participantUsers = await User.find({ _id: { $in: participantObjectIds } });
+    if (participantUsers.length !== participants.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more participants not found'
+      });
+    }
+
+    // Check if participants are in tournament
+    const tournamentParticipantIds = tournament.participants.map(p => p.toString());
+    const allParticipantsInTournament = participantObjectIds.every(pId => 
+      tournamentParticipantIds.includes(pId.toString())
+    );
+
+    if (!allParticipantsInTournament) {
+      return res.status(400).json({
+        success: false,
+        message: 'All participants must be registered in the tournament'
+      });
+    }
+
+    // Create match linked to tournament
+    const match = await Match.create({
+      name: `Match: ${tournament.name}`,
+      type: 'private', // Tournament matches are typically private
+      cost: parseInt(entryFee),
+      prize: 0, // Prize will be determined by tournament
+      tournamentId: tournament._id,
+      player1Id: participantObjectIds[0],
+      player2Id: participantObjectIds[1],
+      status: 'active'
+    });
+
+    // Populate match with players and tournament for DTO transformation
+    const populatedMatch = await Match.findById(match._id)
+      .populate('player1Id')
+      .populate('player2Id')
+      .populate('tournamentId')
+      .lean();
+
+    // Transform to MatchDto format
+    const matchDto = transformMatchToDto(populatedMatch, Tournament, User);
+
+    // Return CreateTournamentMatchResponse format matching C# structure
+    res.json({
+      ok: true,
+      match: matchDto
+    });
+  } catch (error) {
+    logger.error('Create tournament match error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/tournaments/{id}/finalize-match:
+ *   post:
+ *     summary: Finalize a tournament match (Admin only)
+ *     description: Finalize a specific match in a tournament by setting the winner. Updates match status, player stats, and awards prize.
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - matchId
+ *               - winnerId
+ *             properties:
+ *               matchId:
+ *                 type: string
+ *                 description: Match ID to finalize
+ *                 example: "match_id_here"
+ *               winnerId:
+ *                 type: string
+ *                 description: User ID of the match winner
+ *                 example: "user_id_here"
+ *     responses:
+ *       200:
+ *         description: Match finalized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Match finalized successfully"
+ *                 match:
+ *                   $ref: '#/components/schemas/Match'
+ *       400:
+ *         description: Validation error, match not found, or invalid winner
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Tournament or match not found
+ */
+// Finalize tournament match
+router.post('/:id/finalize-match', requireAdmin, [
+  body('matchId').custom((value) => {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+      throw new Error('Match ID must be a valid ID');
+    }
+    return true;
+  }),
+  body('winnerId').custom((value) => {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+      throw new Error('Winner ID must be a valid user ID');
+    }
+    return true;
+  })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const { matchId, winnerId } = req.body;
+
+    // Find tournament
+    const tournament = await Tournament.findById(id);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found'
+      });
+    }
+
+    // Find match
+    const match = await Match.findById(matchId);
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+
+    // Validate match belongs to tournament
+    if (!match.tournamentId || match.tournamentId.toString() !== tournament._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Match does not belong to this tournament'
+      });
+    }
+
+    // Check if match is already completed
+    if (match.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Match is already finalized'
+      });
+    }
+
+    // Validate winner is one of the match players
+    const winnerIdStr = winnerId.toString();
+    const player1IdStr = match.player1Id?.toString();
+    const player2IdStr = match.player2Id?.toString();
+
+    if (player1IdStr !== winnerIdStr && player2IdStr !== winnerIdStr) {
+      return res.status(400).json({
+        success: false,
+        message: 'Winner must be one of the match players'
+      });
+    }
+
+    // Determine loser
+    const loserId = player1IdStr === winnerIdStr ? match.player2Id : match.player1Id;
+
+    // Update match
+    match.status = 'completed';
+    match.winnerId = winnerId;
+    match.completedAt = new Date();
+    await match.save();
+
+    // Get winner's balance before prize
+    const winnerUser = await User.findById(winnerId);
+    const balanceBefore = winnerUser ? winnerUser.coins : 0;
+    const balanceAfter = balanceBefore + (match.prize || 0);
+
+    // Update player stats and award prize
+    if (winnerUser) {
+      await User.findByIdAndUpdate(winnerId, { 
+        $inc: { wins: 1, coins: match.prize || 0 } 
+      });
+    }
+
+    if (loserId) {
+      await User.findByIdAndUpdate(loserId, { $inc: { losses: 1 } });
+    }
+
+    // Log transaction if prize exists
+    if (match.prize && match.prize > 0 && winnerUser) {
+      await Transaction.create({
+        userId: winnerId,
+        type: 'match_win',
+        amount: match.prize,
+        description: `Prize for winning tournament match: ${match.name}`,
+        balanceBefore: balanceBefore,
+        balanceAfter: balanceAfter,
+        matchId: match._id
+      });
+    }
+
+    // Populate match for DTO transformation
+    const populatedMatch = await Match.findById(match._id)
+      .populate('player1Id')
+      .populate('player2Id')
+      .populate('tournamentId')
+      .populate('winnerId');
+
+    // Transform to MatchDto format
+    const matchDto = transformMatchToDto(populatedMatch, Tournament, User);
+
+    res.json({
+      success: true,
+      message: 'Match finalized successfully',
+      match: matchDto
+    });
+  } catch (error) {
+    logger.error('Finalize tournament match error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 
@@ -835,14 +1370,25 @@ router.post('/:id/record-match', requireAdmin, [
         // Distribute prize (use awardPercentage, default 80%)
         const awardPercentage = tournament.awardPercentage || 80;
         const prizeAmount = Math.floor(tournament.prizePool * (awardPercentage / 100));
+        
+        // Get user's current balance before transaction
+        const championUser = await User.findById(champion);
+        const balanceBefore = championUser.coins;
+        const balanceAfter = balanceBefore + prizeAmount;
+        
         await User.findByIdAndUpdate(champion, { $inc: { coins: prizeAmount } });
 
-        // Log transaction
+        // Mark prize as distributed
+        tournament.prizeDistributed = true;
+
+        // Log transaction with balance tracking
         await Transaction.create({
           userId: champion,
           type: 'tournament_win',
           amount: prizeAmount,
           description: `Tournament prize (${awardPercentage}%) for winning: ${tournament.name}`,
+          balanceBefore: balanceBefore,
+          balanceAfter: balanceAfter,
           matchId: null
         });
       } else {
@@ -868,6 +1414,171 @@ router.post('/:id/record-match', requireAdmin, [
     });
   } catch (error) {
     logger.error('Record tournament match error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/tournaments/{id}/finalize:
+ *   post:
+ *     summary: Finalize tournament champion (Admin only)
+ *     description: Set the tournament champion and complete the tournament. Prize will be distributed if not already distributed.
+ *     tags: [Tournaments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tournament ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - championId
+ *             properties:
+ *               championId:
+ *                 type: string
+ *                 description: User ID of the tournament champion
+ *                 example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Tournament finalized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Tournament finalized successfully
+ *                 tournament:
+ *                   $ref: '#/components/schemas/Tournament'
+ *       400:
+ *         description: Validation error or champion not in tournament
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Tournament or champion not found
+ */
+// Finalize tournament champion
+router.post('/:id/finalize', requireAdmin, [
+  body('championId').custom((value) => {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+      throw new Error('Champion ID must be a valid user ID');
+    }
+    return true;
+  })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const { championId } = req.body;
+
+    // Find tournament
+    const tournament = await Tournament.findById(id);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found'
+      });
+    }
+
+    // Check if tournament is already completed
+    if (tournament.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Tournament is already completed'
+      });
+    }
+
+    // Validate champion exists
+    const championUser = await User.findById(championId);
+    if (!championUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Champion not found'
+      });
+    }
+
+    // Validate champion is in tournament
+    const tournamentParticipantIds = tournament.participants.map(p => p.toString());
+    if (!tournamentParticipantIds.includes(championId.toString())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Champion must be a participant in the tournament'
+      });
+    }
+
+    // Set champion and complete tournament
+    tournament.winnerId = new mongoose.Types.ObjectId(championId);
+    tournament.status = 'completed';
+    tournament.completedAt = new Date();
+
+    // Distribute prize if not already distributed
+    if (!tournament.prizeDistributed) {
+      const awardPercentage = tournament.awardPercentage || 80;
+      const prizeAmount = Math.floor(tournament.prizePool * (awardPercentage / 100));
+      
+      // Get user's current balance before transaction
+      const balanceBefore = championUser.coins;
+      const balanceAfter = balanceBefore + prizeAmount;
+      
+      await User.findByIdAndUpdate(championId, { $inc: { coins: prizeAmount } });
+
+      // Mark prize as distributed
+      tournament.prizeDistributed = true;
+
+      // Log transaction with balance tracking
+      await Transaction.create({
+        userId: championId,
+        type: 'tournament_win',
+        amount: prizeAmount,
+        description: `Tournament prize (${awardPercentage}%) for winning: ${tournament.name}`,
+        balanceBefore: balanceBefore,
+        balanceAfter: balanceAfter,
+        matchId: null
+      });
+    }
+
+    await tournament.save();
+
+    // Populate tournament for DTO transformation
+    const populatedTournament = await Tournament.findById(tournament._id)
+      .populate('participants')
+      .populate('winnerId')
+      .lean();
+
+    // Transform to TournamentDto format
+    const tournamentDto = await transformTournamentToDto(populatedTournament, Match, User);
+
+    res.json({
+      success: true,
+      message: 'Tournament finalized successfully',
+      tournament: tournamentDto
+    });
+  } catch (error) {
+    logger.error('Finalize tournament error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -1044,18 +1755,24 @@ router.post('/:id/cancel', requireAdmin, [
     for (const participantId of tournament.participants) {
       const user = await User.findById(participantId);
       if (user) {
+        // Get balance before refund
+        const balanceBefore = user.coins;
+        const balanceAfter = balanceBefore + tournament.entryCost;
+
         // Atomically refund coins
         await User.findByIdAndUpdate(
           participantId,
           { $inc: { coins: tournament.entryCost } }
         );
 
-        // Log refund transaction
+        // Log refund transaction with balance tracking
         await Transaction.create({
           userId: user._id,
           type: 'tournament_entry',
           amount: tournament.entryCost,
           description: `Refund for cancelled tournament: ${tournament.name}`,
+          balanceBefore: balanceBefore,
+          balanceAfter: balanceAfter,
           matchId: null
         });
       }

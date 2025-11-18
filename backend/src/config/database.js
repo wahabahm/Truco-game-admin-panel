@@ -43,9 +43,19 @@ const initializeDefaultAdmin = async () => {
         email: 'admin@truco.com',
         passwordHash: hashedPassword,
         role: 'admin',
-        coins: 10000
+        coins: 10000,
+        emailVerified: true // Admin accounts are trusted and automatically verified
       });
       logger.info('✅ Default admin user created (admin@truco.com / admin123)');
+    } else {
+      // Update existing admin to be verified if not already
+      if (!adminExists.emailVerified) {
+        await User.updateOne(
+          { email: 'admin@truco.com' },
+          { $set: { emailVerified: true } }
+        );
+        logger.info('✅ Existing admin user marked as verified');
+      }
     }
   } catch (error) {
     logger.error('❌ Error initializing admin user:', error);

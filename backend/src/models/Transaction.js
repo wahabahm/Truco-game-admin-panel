@@ -19,6 +19,18 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  balanceBefore: {
+    type: Number,
+    default: null
+  },
+  balanceAfter: {
+    type: Number,
+    default: null
+  },
+  meta: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   matchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Match',

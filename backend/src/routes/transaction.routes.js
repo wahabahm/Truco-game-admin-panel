@@ -2,6 +2,7 @@ import express from 'express';
 import Transaction from '../models/Transaction.js';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
 import { logger } from '../utils/logger.js';
+import { transformTransactionToDto } from '../utils/dtoTransformers.js';
 
 const router = express.Router();
 
@@ -67,23 +68,16 @@ router.get('/', async (req, res) => {
     }
 
     const transactions = await Transaction.find(query)
-      .populate('userId', 'name email')
+      .populate('userId')
       .populate('matchId', 'name')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .lean();
 
-    const formattedTransactions = transactions.map(transaction => ({
-      id: transaction._id.toString(),
-      userId: transaction.userId?._id?.toString() || transaction.userId?.toString(),
-      type: transaction.type,
-      amount: transaction.amount,
-      description: transaction.description,
-      matchId: transaction.matchId?._id?.toString() || transaction.matchId?.toString() || null,
-      timestamp: transaction.createdAt,
-      userName: transaction.userId?.name || 'Unknown',
-      userEmail: transaction.userId?.email || 'Unknown'
-    }));
+    // Transform to TransactionDto format
+    const formattedTransactions = transactions.map(transaction => 
+      transformTransactionToDto(transaction, null)
+    );
 
     res.json({
       success: true,

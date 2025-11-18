@@ -16,6 +16,7 @@ export interface UserDto {
   role: string;
   avatar: string; // Non-nullable to match C# structure
   emailVerified: boolean;
+  status?: 'active' | 'suspended'; // User account status
   wallet: WalletDto;
   stats: StatsDto;
   createdAt: string;
@@ -24,11 +25,6 @@ export interface UserDto {
 // Match Types
 export interface MatchDto {
   _id: string;
-  name?: string;
-  type?: string;
-  cost?: number;
-  prize?: number;
-  matchDate?: string | null;
   tournament: TournamentDto | null;
   players: UserDto[];
   status: string;
@@ -117,7 +113,6 @@ export interface EmailBodyRequest {
 
 export interface OTPRequest {
   otp: string;
-  email?: string; // Optional - if not provided, user will be found by OTP code
 }
 
 export interface SendOTPRequest {
@@ -125,7 +120,7 @@ export interface SendOTPRequest {
 }
 
 export interface RegisterResponse {
-  id: string;
+  _id: string;
   username: string;
   email: string;
   message: string;
@@ -155,6 +150,11 @@ export interface AdminCheckResponse {
 
 export interface FinalizeChampionRequest {
   championId: string;
+}
+
+export interface FinalizeMatchRequest {
+  matchId: string;
+  winnerId: string;
 }
 
 export interface CreateTournamentRequestAdmin {

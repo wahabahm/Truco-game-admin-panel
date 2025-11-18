@@ -69,14 +69,14 @@ export const authService = {
     }
   },
 
-  verifyEmail: async (token: string) => {
+  verifyEmail: async (email: string, otp: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ email, otp }),
       });
 
       const data = await response.json();
@@ -193,6 +193,44 @@ export const authService = {
       };
     } catch (error) {
       logger.error('Verify OTP error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
+      };
+    }
+  },
+
+  register: async (name: string, email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.error || 'Registration failed'
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Registration successful',
+        user: {
+          id: data._id,
+          username: data.username,
+          email: data.email
+        },
+        token: data.AuthToken
+      };
+    } catch (error) {
+      logger.error('Registration error:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR

@@ -26,6 +26,11 @@ const matchSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  tournamentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tournament',
+    default: null
+  },
   status: {
     type: String,
     enum: ['active', 'completed', 'cancelled'],

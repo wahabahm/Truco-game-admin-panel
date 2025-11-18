@@ -112,8 +112,8 @@ const Users = () => {
   }, [users, selectedUser]);
 
   const filteredUsers = (users || []).filter(user => {
-    // Status filter - Note: status might not be in UserDto, using optional chaining
-    const matchesStatus = statusFilter === 'all' || (user as any).status === statusFilter;
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || (user.status || 'active') === statusFilter;
     
     // Search filter
     const matchesSearch = !searchTerm || 
@@ -136,7 +136,7 @@ const Users = () => {
       await apiService.updateUserStatus(userId, newStatus);
       
       setUsers(users.map(user =>
-        user._id === userId ? { ...user, status: newStatus } as any : user
+        user._id === userId ? { ...user, status: newStatus as 'active' | 'suspended' } : user
       ));
       
       // Auto-switch to suspended filter when user is suspended
@@ -269,11 +269,20 @@ const Users = () => {
           });
         }
         
+        // Batch state updates to prevent forced reflow
         setRegisterDialogOpen(false);
         setRegisterForm({ name: '', email: '', password: '' });
-        // Refresh users list
-        const data = await apiService.getUsers();
-        setUsers(Array.isArray(data) ? data : []);
+        
+        // Refresh users list asynchronously after dialog closes to prevent blocking
+        requestAnimationFrame(async () => {
+          try {
+            const data = await apiService.getUsers();
+            setUsers(Array.isArray(data) ? data : []);
+          } catch (error) {
+            logger.error('Failed to refresh users list:', error);
+            // Don't show error toast as registration was successful
+          }
+        });
       } else {
         toast.error(result.message || 'Failed to register player');
       }
@@ -395,7 +404,7 @@ const Users = () => {
               }`}
             >
               <CheckCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden xs:inline">Active </span>({users.filter(u => (u as any).status === 'active').length})
+              <span className="hidden xs:inline">Active </span>({users.filter(u => (u.status || 'active') === 'active').length})
             </Button>
             <Button
               variant={statusFilter === 'suspended' ? 'default' : 'ghost'}
@@ -408,7 +417,7 @@ const Users = () => {
               }`}
             >
               <Ban className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden xs:inline">Suspended </span>({users.filter(u => (u as any).status === 'suspended').length})
+              <span className="hidden xs:inline">Suspended </span>({users.filter(u => (u.status || 'active') === 'suspended').length})
             </Button>
           </div>
 
@@ -453,6 +462,7 @@ const Users = () => {
                       onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
                       placeholder="Enter player name"
                       className="h-11"
+                      autoComplete="name"
                       required
                       minLength={2}
                       maxLength={255}
@@ -467,6 +477,7 @@ const Users = () => {
                       onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                       placeholder="Enter email address"
                       className="h-11"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -479,6 +490,7 @@ const Users = () => {
                       onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                       placeholder="Enter password (min 6 characters)"
                       className="h-11"
+                      autoComplete="new-password"
                       required
                       minLength={6}
                     />
@@ -533,6 +545,7 @@ const Users = () => {
                 <TableHead className="font-semibold text-foreground min-w-[100px]">Stats</TableHead>
                 <TableHead className="font-semibold text-foreground min-w-[120px]">Coins</TableHead>
                 <TableHead className="font-semibold text-foreground min-w-[100px]">Status</TableHead>
+                <TableHead className="font-semibold text-foreground min-w-[130px]">Email Verified</TableHead>
                 <TableHead className="font-semibold text-foreground min-w-[120px] hidden sm:table-cell">Joined</TableHead>
                 <TableHead className="font-semibold text-foreground min-w-[120px]">Actions</TableHead>
               </TableRow>
@@ -548,13 +561,14 @@ const Users = () => {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-20" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">
+                  <TableCell colSpan={9} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <UsersIcon size={48} className="text-muted-foreground/50" />
                       <div>
@@ -568,10 +582,12 @@ const Users = () => {
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => {
-                  const userStatus = (user as any).status || 'active';
+                  const userStatus = user.status || 'active';
                   const userCoins = user.wallet?.balance || 0;
                   const userWins = user.stats?.wins || 0;
                   const userLosses = user.stats?.losses || 0;
+                  // Admin accounts are trusted and automatically considered verified
+                  const isEmailVerified = user.role === 'admin' ? true : (user.emailVerified || false);
                   
                   return (
                   <TableRow key={user._id} className="hover:bg-primary/10 hover:shadow-md transition-all duration-300 border-b border-border/30 group">
@@ -618,6 +634,27 @@ const Users = () => {
                         className={userStatus === 'active' ? 'bg-success/10 text-success border-success/30' : ''}
                       >
                         {userStatus}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={isEmailVerified ? 'default' : 'outline'}
+                        className={isEmailVerified 
+                          ? 'bg-success/10 text-success border-success/30 flex items-center gap-1.5' 
+                          : 'bg-warning/10 text-warning border-warning/30 flex items-center gap-1.5'
+                        }
+                      >
+                        {isEmailVerified ? (
+                          <>
+                            <CheckCircle className="h-3 w-3" />
+                            <span>Verified</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-3 w-3" />
+                            <span>Not Verified</span>
+                          </>
+                        )}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">{user.createdAt}</TableCell>

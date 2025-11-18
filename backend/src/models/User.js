@@ -16,6 +16,30 @@ const userSchema = new mongoose.Schema({
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
     index: true
   },
+  avatar: {
+    type: String,
+    default: null
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String,
+    default: null
+  },
+  emailVerificationTokenExpiry: {
+    type: Date,
+    default: null
+  },
+  otpCode: {
+    type: String,
+    default: null
+  },
+  otpExpiry: {
+    type: Date,
+    default: null
+  },
   passwordHash: {
     type: String,
     required: true
@@ -53,6 +77,10 @@ const userSchema = new mongoose.Schema({
       delete ret._id;
       delete ret.__v;
       delete ret.passwordHash;
+      delete ret.emailVerificationToken;
+      delete ret.emailVerificationTokenExpiry;
+      delete ret.otpCode;
+      delete ret.otpExpiry;
       return ret;
     }
   }
