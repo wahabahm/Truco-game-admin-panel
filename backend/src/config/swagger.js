@@ -23,7 +23,7 @@ const options = {
         description: 'Development server'
       },
       {
-        url: 'https://api.truco.com',
+        url: 'https://srv983121.hstgr.cloud',
         description: 'Production server'
       }
     ],
