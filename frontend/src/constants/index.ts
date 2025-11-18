@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://truco-backend-production.up.railway.app/api',
+  BASE_URL: import.meta.env.VITE_API_URL || 'https://srv983121.hstgr.cloud/api/',
   TIMEOUT: 30000,
 } as const;
 
