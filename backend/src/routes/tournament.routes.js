@@ -138,7 +138,7 @@ router.get('/export', requireAdmin, async (req, res) => {
     if (format === 'json') {
       // JSON export
       const exportData = tournaments.map(tournament => ({
-        id: tournament._id.toString(),
+        _id: tournament._id.toString(),
         name: tournament.name,
         type: tournament.type,
         maxPlayers: tournament.maxPlayers,
@@ -149,13 +149,13 @@ router.get('/export', requireAdmin, async (req, res) => {
         status: tournament.status,
         participantCount: tournament.participants?.length || 0,
         participants: tournament.participants?.map(p => ({
-          id: p._id?.toString() || p.toString(),
-          name: p.name || 'Unknown',
+          _id: p._id?.toString() || p.toString(),
+          username: p.name || p.username || 'Unknown',
           email: p.email || 'Unknown'
         })) || [],
         currentRound: tournament.currentRound,
         winnerId: tournament.winnerId?._id?.toString() || tournament.winnerId?.toString() || null,
-        winnerName: tournament.winnerId?.name || null,
+        winnerName: tournament.winnerId?.name || tournament.winnerId?.username || null,
         completedAt: tournament.completedAt || null,
         cancelledAt: tournament.cancelledAt || null,
         cancellationReason: tournament.cancellationReason || null,
@@ -190,7 +190,7 @@ router.get('/export', requireAdmin, async (req, res) => {
 
       const csvRows = tournaments.map(tournament => {
         const participants = tournament.participants?.map(p => 
-          `${p.name || 'Unknown'} (${p.email || 'N/A'})`
+          `${p.name || p.username || 'Unknown'} (${p.email || 'N/A'})`
         ).join('; ') || 'None';
 
         return [
@@ -206,7 +206,7 @@ router.get('/export', requireAdmin, async (req, res) => {
           tournament.participants?.length || 0,
           `"${participants}"`,
           tournament.currentRound || 0,
-          tournament.winnerId?.name || tournament.winnerId?.email || '',
+          tournament.winnerId?.name || tournament.winnerId?.username || tournament.winnerId?.email || '',
           tournament.completedAt ? new Date(tournament.completedAt).toISOString() : '',
           tournament.cancelledAt ? new Date(tournament.cancelledAt).toISOString() : '',
           `"${tournament.cancellationReason || ''}"`,
@@ -522,9 +522,10 @@ router.post('/:id/join', async (req, res) => {
   const session = await mongoose.startSession();
   
   try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
     await session.withTransaction(async () => {
-      const { id } = req.params;
-      const userId = req.user.id;
 
       // Get tournament with session for transaction
       const tournament = await Tournament.findById(id).session(session);
@@ -595,7 +596,6 @@ router.post('/:id/join', async (req, res) => {
     });
 
     // After transaction, get updated user and tournament
-    const { id } = req.params;
     const tournament = await Tournament.findById(id);
     const updatedUser = await User.findById(userId).select('coins');
     

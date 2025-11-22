@@ -40,249 +40,309 @@ const options = {
         User: {
           type: 'object',
           properties: {
-            id: {
+            _id: {
               type: 'string',
-              description: 'User ID'
+              description: 'User ID',
+              example: '507f1f77bcf86cd799439011'
             },
-            name: {
+            username: {
               type: 'string',
-              description: 'User name'
+              description: 'Username',
+              example: 'John Doe'
             },
             email: {
               type: 'string',
               format: 'email',
-              description: 'User email'
+              description: 'User email',
+              example: 'john@example.com'
             },
             role: {
               type: 'string',
               enum: ['player', 'admin'],
-              description: 'User role'
+              description: 'User role',
+              example: 'player'
+            },
+            avatar: {
+              type: 'string',
+              description: 'User avatar URL',
+              example: ''
+            },
+            emailVerified: {
+              type: 'boolean',
+              description: 'Email verification status',
+              example: false
             },
             status: {
               type: 'string',
               enum: ['active', 'suspended'],
-              description: 'User status'
+              description: 'User status',
+              example: 'active'
             },
-            coins: {
-              type: 'number',
-              description: 'User coin balance'
+            wallet: {
+              type: 'object',
+              properties: {
+                balance: {
+                  type: 'number',
+                  description: 'Coin balance',
+                  example: 100
+                }
+              }
             },
-            wins: {
-              type: 'number',
-              description: 'Total wins'
-            },
-            losses: {
-              type: 'number',
-              description: 'Total losses'
+            stats: {
+              type: 'object',
+              properties: {
+                wins: {
+                  type: 'number',
+                  description: 'Total wins',
+                  example: 5
+                },
+                losses: {
+                  type: 'number',
+                  description: 'Total losses',
+                  example: 2
+                },
+                matchesPlayed: {
+                  type: 'number',
+                  description: 'Total matches played',
+                  example: 7
+                }
+              }
             },
             createdAt: {
               type: 'string',
               format: 'date-time',
-              description: 'Account creation date'
+              description: 'Account creation date',
+              example: '2024-01-15T10:30:00.000Z'
             }
           }
         },
         Match: {
           type: 'object',
           properties: {
-            id: {
+            _id: {
               type: 'string',
-              description: 'Match ID'
+              description: 'Match ID',
+              example: '507f1f77bcf86cd799439011'
             },
             name: {
               type: 'string',
-              description: 'Match name'
+              description: 'Match name',
+              example: 'Championship Match'
             },
             type: {
               type: 'string',
               enum: ['public', 'private'],
-              description: 'Match type'
-            },
-            status: {
-              type: 'string',
-              enum: ['active', 'completed', 'cancelled'],
-              description: 'Match status'
-            },
-            player1Id: {
-              type: 'string',
-              description: 'Player 1 user ID'
-            },
-            player2Id: {
-              type: 'string',
-              description: 'Player 2 user ID'
+              description: 'Match type',
+              example: 'public'
             },
             cost: {
               type: 'number',
-              description: 'Entry cost in coins'
+              description: 'Entry cost in coins',
+              example: 50
             },
             prize: {
               type: 'number',
-              description: 'Prize amount in coins'
-            },
-            winnerId: {
-              type: 'string',
-              description: 'Winner user ID'
+              description: 'Prize amount in coins',
+              example: 100
             },
             matchDate: {
               type: 'string',
               format: 'date-time',
               nullable: true,
-              description: 'Scheduled match date'
+              description: 'Scheduled match date',
+              example: '2024-03-15T10:00:00.000Z'
+            },
+            tournament: {
+              type: 'object',
+              nullable: true,
+              description: 'Tournament reference (if match is part of tournament)',
+              properties: {
+                _id: { type: 'string' },
+                name: { type: 'string' },
+                description: { type: 'string' },
+                entryFee: { type: 'number' },
+                maxPlayers: { type: 'number' },
+                status: { type: 'string' }
+              }
+            },
+            players: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/User'
+              },
+              description: 'Array of players (UserDto objects)',
+              example: []
+            },
+            status: {
+              type: 'string',
+              enum: ['active', 'completed', 'cancelled'],
+              description: 'Match status',
+              example: 'active'
+            },
+            winner: {
+              $ref: '#/components/schemas/User',
+              nullable: true,
+              description: 'Match winner (UserDto object)'
+            },
+            finishedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Match completion date',
+              example: '2024-03-15T11:00:00.000Z'
             },
             createdAt: {
               type: 'string',
-              format: 'date-time'
-            },
-            completedAt: {
-              type: 'string',
               format: 'date-time',
-              nullable: true
+              description: 'Match creation date',
+              example: '2024-03-15T09:00:00.000Z'
             }
           }
         },
         Tournament: {
           type: 'object',
           properties: {
-            id: {
+            _id: {
               type: 'string',
-              description: 'Tournament ID'
+              description: 'Tournament ID',
+              example: '507f1f77bcf86cd799439011'
             },
             name: {
               type: 'string',
-              description: 'Tournament name'
+              description: 'Tournament name',
+              example: 'Spring Championship'
+            },
+            description: {
+              type: 'string',
+              description: 'Tournament description',
+              example: 'Annual spring tournament'
             },
             type: {
               type: 'string',
               enum: ['public', 'private'],
-              description: 'Tournament type'
+              description: 'Tournament type',
+              example: 'public'
             },
-            status: {
-              type: 'string',
-              enum: ['registration', 'active', 'completed', 'cancelled'],
-              description: 'Tournament status'
+            entryFee: {
+              type: 'number',
+              description: 'Entry fee in coins',
+              example: 100
             },
             maxPlayers: {
               type: 'number',
               enum: [4, 8],
-              description: 'Maximum players (4 or 8)'
+              description: 'Maximum players (4 or 8)',
+              example: 8
             },
-            entryCost: {
-              type: 'number',
-              description: 'Entry cost in coins'
+            status: {
+              type: 'string',
+              enum: ['registration', 'active', 'completed', 'cancelled'],
+              description: 'Tournament status',
+              example: 'registration'
             },
-            prizePool: {
-              type: 'number',
-              description: 'Total prize pool'
-            },
-            awardPercentage: {
-              type: 'number',
-              description: 'Prize percentage for champion (default 80%)'
-            },
-            participants: {
+            players: {
               type: 'array',
               items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  name: { type: 'string' },
-                  email: { type: 'string' }
-                }
+                $ref: '#/components/schemas/User'
               },
-              description: 'Array of registered participants'
+              description: 'Array of registered players (UserDto objects)',
+              example: []
             },
-            participantCount: {
-              type: 'number',
-              description: 'Number of registered participants'
-            },
-            bracket: {
-              type: 'object',
-              description: 'Tournament bracket structure'
-            },
-            currentRound: {
-              type: 'number',
-              description: 'Current round number'
-            },
-            winnerId: {
-              type: 'string',
+            champion: {
+              $ref: '#/components/schemas/User',
               nullable: true,
-              description: 'Winner user ID'
-            },
-            winnerName: {
-              type: 'string',
-              nullable: true,
-              description: 'Winner name'
+              description: 'Tournament champion (UserDto object)'
             },
             startDate: {
               type: 'string',
               format: 'date-time',
               nullable: true,
-              description: 'Tournament start date'
+              description: 'Tournament start date',
+              example: '2024-03-15T10:00:00.000Z'
             },
-            completedAt: {
+            endDate: {
               type: 'string',
               format: 'date-time',
-              nullable: true
+              nullable: true,
+              description: 'Tournament end date',
+              example: '2024-03-20T10:00:00.000Z'
             },
-            cancelledAt: {
-              type: 'string',
-              format: 'date-time',
-              nullable: true
+            tournamentAwardPercentage: {
+              type: 'number',
+              description: 'Prize percentage for champion (default 80%)',
+              example: 80
             },
-            cancellationReason: {
-              type: 'string',
-              nullable: true
+            prizePool: {
+              type: 'number',
+              description: 'Total prize pool for tournament',
+              example: 800
             },
-            createdAt: {
-              type: 'string',
-              format: 'date-time'
+            matches: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Match'
+              },
+              description: 'Array of matches in this tournament',
+              example: []
+            },
+            prizeDistributed: {
+              type: 'boolean',
+              description: 'Whether prize has been distributed',
+              example: false
             }
           }
         },
         Transaction: {
           type: 'object',
           properties: {
-            id: {
+            _id: {
               type: 'string',
-              description: 'Transaction ID'
+              description: 'Transaction ID',
+              example: '507f1f77bcf86cd799439011'
             },
-            userId: {
-              type: 'string',
-              description: 'User ID'
-            },
-            userName: {
-              type: 'string',
-              description: 'User name'
-            },
-            userEmail: {
-              type: 'string',
-              description: 'User email'
+            user: {
+              $ref: '#/components/schemas/User',
+              nullable: true,
+              description: 'User associated with transaction (UserDto object)'
             },
             type: {
               type: 'string',
               enum: ['match_entry', 'match_win', 'tournament_entry', 'tournament_win', 'coin_purchase', 'admin_add', 'admin_remove'],
-              description: 'Transaction type'
+              description: 'Transaction type',
+              example: 'match_entry'
             },
             amount: {
               type: 'number',
-              description: 'Transaction amount (positive for credit, negative for debit)'
+              description: 'Transaction amount (positive for credit, negative for debit)',
+              example: 100
             },
-            description: {
+            reason: {
               type: 'string',
-              description: 'Transaction description'
+              description: 'Transaction reason/description',
+              example: 'Entry fee for match: Championship Match'
             },
-            matchId: {
-              type: 'string',
+            balanceBefore: {
+              type: 'number',
               nullable: true,
-              description: 'Related match ID (if applicable)'
+              description: 'User balance before transaction',
+              example: 200
             },
-            timestamp: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Transaction timestamp'
+            balanceAfter: {
+              type: 'number',
+              nullable: true,
+              description: 'User balance after transaction',
+              example: 100
+            },
+            meta: {
+              type: 'object',
+              description: 'Additional transaction metadata',
+              example: {}
             },
             createdAt: {
               type: 'string',
-              format: 'date-time'
+              format: 'date-time',
+              description: 'Transaction creation date',
+              example: '2024-03-15T10:00:00.000Z'
             }
           }
         },

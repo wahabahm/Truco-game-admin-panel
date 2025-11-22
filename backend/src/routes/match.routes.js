@@ -141,7 +141,7 @@ router.get('/export', requireAdmin, async (req, res) => {
     if (format === 'json') {
       // JSON export
       const exportData = matches.map(match => ({
-        id: match._id.toString(),
+        _id: match._id.toString(),
         name: match.name,
         type: match.type,
         cost: match.cost,
@@ -149,13 +149,13 @@ router.get('/export', requireAdmin, async (req, res) => {
         matchDate: match.matchDate || null,
         status: match.status,
         player1Id: match.player1Id?._id?.toString() || null,
-        player1Name: match.player1Id?.name || null,
+        player1Name: match.player1Id?.name || match.player1Id?.username || null,
         player1Email: match.player1Id?.email || null,
         player2Id: match.player2Id?._id?.toString() || null,
-        player2Name: match.player2Id?.name || null,
+        player2Name: match.player2Id?.name || match.player2Id?.username || null,
         player2Email: match.player2Id?.email || null,
         winnerId: match.winnerId?._id?.toString() || null,
-        winnerName: match.winnerId?.name || null,
+        winnerName: match.winnerId?.name || match.winnerId?.username || null,
         completedAt: match.completedAt || null,
         createdAt: match.createdAt,
         updatedAt: match.updatedAt
@@ -192,11 +192,11 @@ router.get('/export', requireAdmin, async (req, res) => {
           match.prize || 0,
           match.matchDate ? new Date(match.matchDate).toISOString() : '',
           match.status || '',
-          match.player1Id?.name || '',
+          match.player1Id?.name || match.player1Id?.username || '',
           match.player1Id?.email || '',
-          match.player2Id?.name || '',
+          match.player2Id?.name || match.player2Id?.username || '',
           match.player2Id?.email || '',
-          match.winnerId?.name || '',
+          match.winnerId?.name || match.winnerId?.username || '',
           match.completedAt ? new Date(match.completedAt).toISOString() : '',
           match.createdAt ? new Date(match.createdAt).toISOString() : ''
         ].join(',');

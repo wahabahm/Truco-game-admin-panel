@@ -53,18 +53,29 @@ const router = express.Router();
  *                 token:
  *                   type: string
  *                   description: JWT token for authentication
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     email:
- *                       type: string
- *                     name:
- *                       type: string
- *                     role:
- *                       type: string
- *                       enum: [player, admin]
+ *                   $ref: '#/components/schemas/User'
+ *             examples:
+ *               success:
+ *                 value:
+ *                   success: true
+ *                   token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJlbWFpbCI6ImpvaG5AZXhhbXBsZS5jb20iLCJyb2xlIjoicGxheWVyIn0..."
+ *                   user:
+ *                     _id: "507f1f77bcf86cd799439011"
+ *                     username: "John Doe"
+ *                     email: "john@example.com"
+ *                     role: "player"
+ *                     avatar: ""
+ *                     emailVerified: false
+ *                     status: "active"
+ *                     wallet:
+ *                       balance: 100
+ *                     stats:
+ *                       wins: 5
+ *                       losses: 2
+ *                       matchesPlayed: 7
+ *                     createdAt: "2024-01-15T10:30:00.000Z"
  *       401:
  *         description: Invalid credentials
  *         content:
@@ -198,7 +209,7 @@ router.post('/login', [
  *             schema:
  *               type: object
  *               properties:
- *                 id:
+ *                 _id:
  *                   type: string
  *                   description: User ID
  *                   example: "507f1f77bcf86cd799439011"
@@ -348,6 +359,25 @@ router.post('/register', [
  *                   example: true
  *                 user:
  *                   $ref: '#/components/schemas/User'
+ *             examples:
+ *               success:
+ *                 value:
+ *                   success: true
+ *                   user:
+ *                     _id: "507f1f77bcf86cd799439011"
+ *                     username: "John Doe"
+ *                     email: "john@example.com"
+ *                     role: "player"
+ *                     avatar: ""
+ *                     emailVerified: false
+ *                     status: "active"
+ *                     wallet:
+ *                       balance: 100
+ *                     stats:
+ *                       wins: 5
+ *                       losses: 2
+ *                       matchesPlayed: 7
+ *                     createdAt: "2024-01-15T10:30:00.000Z"
  *       401:
  *         description: Unauthorized - Invalid or missing token
  *         content:
@@ -1015,6 +1045,26 @@ router.post('/send-otp', [
  *                   example: OTP verified successfully
  *                 user:
  *                   $ref: '#/components/schemas/User'
+ *             examples:
+ *               success:
+ *                 value:
+ *                   success: true
+ *                   message: "OTP verified successfully"
+ *                   user:
+ *                     _id: "507f1f77bcf86cd799439011"
+ *                     username: "John Doe"
+ *                     email: "john@example.com"
+ *                     role: "player"
+ *                     avatar: ""
+ *                     emailVerified: true
+ *                     status: "active"
+ *                     wallet:
+ *                       balance: 100
+ *                     stats:
+ *                       wins: 5
+ *                       losses: 2
+ *                       matchesPlayed: 7
+ *                     createdAt: "2024-01-15T10:30:00.000Z"
  *       400:
  *         description: Invalid or expired OTP
  *       404:

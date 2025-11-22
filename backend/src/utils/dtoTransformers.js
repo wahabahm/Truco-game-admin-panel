@@ -95,6 +95,7 @@ export function transformUserToDto(user) {
       startDate: tournamentObj.startDate ? new Date(tournamentObj.startDate).toISOString() : null,
       endDate: tournamentObj.endDate ? new Date(tournamentObj.endDate).toISOString() : null,
       tournamentAwardPercentage: tournamentObj.awardPercentage || tournamentObj.tournamentAwardPercentage || 80,
+      prizePool: tournamentObj.prizePool || 0,
       matches: matches,
       prizeDistributed: tournamentObj.prizeDistributed || false
     };

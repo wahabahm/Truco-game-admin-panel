@@ -47,6 +47,7 @@ export interface TournamentDto {
   startDate: string | null;
   endDate: string | null;
   tournamentAwardPercentage: number;
+  prizePool: number;
   matches: MatchDto[];
   prizeDistributed: boolean;
 }

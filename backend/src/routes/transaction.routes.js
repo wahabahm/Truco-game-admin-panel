@@ -152,9 +152,9 @@ router.get('/export', requireAdmin, async (req, res) => {
     if (format === 'json') {
       // JSON export
       const exportData = transactions.map(transaction => ({
-        id: transaction._id.toString(),
+        _id: transaction._id.toString(),
         userId: transaction.userId?._id?.toString() || transaction.userId?.toString(),
-        userName: transaction.userId?.name || 'Unknown',
+        username: transaction.userId?.name || transaction.userId?.username || 'Unknown',
         userEmail: transaction.userId?.email || 'Unknown',
         type: transaction.type,
         amount: transaction.amount,
@@ -187,7 +187,7 @@ router.get('/export', requireAdmin, async (req, res) => {
         return [
           transaction._id.toString(),
           transaction.userId?._id?.toString() || transaction.userId?.toString() || '',
-          transaction.userId?.name || 'Unknown',
+          transaction.userId?.name || transaction.userId?.username || 'Unknown',
           transaction.userId?.email || 'Unknown',
           transaction.type || '',
           transaction.amount || 0,

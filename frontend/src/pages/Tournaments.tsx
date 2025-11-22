@@ -446,7 +446,7 @@ const Tournaments = () => {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Trophy className="h-3.5 w-3.5 text-accent" />
-                        <span>{(tournament as any).prizePool || 0} coins</span>
+                        <span>{tournament.prizePool || 0} coins</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -531,7 +531,7 @@ const Tournaments = () => {
               <DialogDescription>
                 {selectedTournament && (
                   <>
-                    {selectedTournament.maxPlayers}-player tournament • Prize: {(selectedTournament as any).prizePool || 0} coins (80% to champion)
+                    {selectedTournament.maxPlayers}-player tournament • Prize: {selectedTournament.prizePool || 0} coins (80% to champion)
                   </>
                 )}
               </DialogDescription>
@@ -558,7 +558,7 @@ const Tournaments = () => {
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground">Prize Pool</div>
-                    <div className="text-lg font-bold mt-1">{(selectedTournament as any).prizePool || 0} coins</div>
+                    <div className="text-lg font-bold mt-1">{selectedTournament.prizePool || 0} coins</div>
                   </div>
                 </div>
 
