@@ -213,7 +213,7 @@ NODE_ENV=development
 # Database Configuration (MongoDB)
 MONGODB_URI=mongodb://localhost:27017/truco_game
 # Alternative format: mongodb://username:password@host:port/database
-# For MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/truco_game
+# For MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/truco_game
 
 # JWT Configuration
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production

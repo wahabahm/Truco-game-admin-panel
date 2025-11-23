@@ -38,7 +38,7 @@ mongod --dbpath "C:\data\db"
 **Option B: MongoDB Atlas (Cloud)**
 - Use connection string in `.env`:
 ```env
-MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/truco_game
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/truco_game
 ```
 
 ## Step 4: Start Backend Server

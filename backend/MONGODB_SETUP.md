@@ -50,7 +50,7 @@ If you see `connect ECONNREFUSED ::1:27017`, it means MongoDB is not running.
 
 5. **Update .env file:**
    ```env
-   MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/truco_game?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/truco_game?retryWrites=true&w=majority
    ```
    Replace `username` and `password` with your database user credentials.
 
@@ -86,7 +86,7 @@ MONGODB_URI=mongodb://localhost:27017/truco_game
 
 Or for MongoDB Atlas:
 ```env
-MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/truco_game
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/truco_game
 ```
 
 ## After Setup
