@@ -260,7 +260,7 @@ const Tournaments = () => {
                     <span className="sm:hidden">Create</span>
                   </Button>
                 </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Tournament</DialogTitle>
                 <DialogDescription>
@@ -283,9 +283,10 @@ const Tournaments = () => {
                   <Select
                     value={formData.type}
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select tournament type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="public">Public</SelectItem>
@@ -298,9 +299,10 @@ const Tournaments = () => {
                   <Select
                     value={formData.maxPlayers}
                     onValueChange={(value) => setFormData({ ...formData, maxPlayers: value })}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select number of players" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="4">4 Players</SelectItem>
